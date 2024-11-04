@@ -13,24 +13,6 @@ DebugLens is a debugging tool that provides:
 - Step-by-step code behavior tracking
 - Real-time variable state monitoring
 
-## Technical Details
-
-The tool provides debugging capabilities for Python code with features like:
-
-- Abstract syntax tree analysis
-- Runtime state inspection
-- Data structure visualization
-- Type inference and tracking
-
-## Example Use Case
-
-In the demonstrated example, the tool is debugging a Git-like version control implementation, showing:
-
-- Repository and branch management operations
-- Commit creation and linking
-- Change tracking
-- Data structure definitions and relationships
-
 ## Purpose
 
 DebugLens aims to:
