@@ -1,0 +1,12 @@
+DebugLens is an AI-driven debugging tool integrated with an abstract code generation feature, with an intent to grasp any new code basse. And It enables developers to:
+
+- View, debug, and interact abstracted versions of source code.
+- Set breakpoints, step through execution, and inspect variables in a simplified, high-level format.
+- Focus on code abstraction, execution simulation, and support for abstract or pseudo code.
+- abstract code exeuction engine is a service that talks to llm to provide execution trace and variable context.
+
+
+
+Use it both as an IDE extension (e.g., Visual Studio Code) and a web application.
+
+

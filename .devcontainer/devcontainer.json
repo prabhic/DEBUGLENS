@@ -1,0 +1,88 @@
+{
+	"name": "DebugLens Development",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+
+	"forwardPorts": [
+		5000,
+		3001
+	],
+
+	"postCreateCommand": {
+		"python_packages": "cd ${containerWorkspaceFolder}/backend && if [ -f requirements.txt ]; then pip3 install --user -r requirements.txt && pip3 install black flake8; else echo 'No requirements.txt found'; fi",
+		"node_packages": "cd ${containerWorkspaceFolder}/frontend && npm install && npm install -g --prefix ${NPM_GLOBAL} prettier eslint",
+		"verify": "echo 'Verifying installations...' && python --version && node --version && npm --version"
+	},
+
+	"postStartCommand": "sudo /usr/local/bin/configure-watches.sh",
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"bradlc.vscode-tailwindcss",
+				"ms-python.vscode-pylance",
+				"formulahendry.auto-rename-tag",
+				"christian-kohler.path-intellisense",
+				"ms-python.black-formatter",
+				"ms-python.flake8",
+				"dsznajder.es7-react-js-snippets",
+				"mikestead.dotenv"
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"python.linting.enabled": true,
+				"python.linting.flake8Enabled": true,
+				"python.formatting.provider": "black",
+				"editor.formatOnSave": true,
+				"editor.codeActionsOnSave": {
+					"source.fixAll.eslint": "always"
+				},
+				"[javascript]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[javascriptreact]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[python]": {
+					"editor.defaultFormatter": "ms-python.black-formatter"
+				},
+				"files.associations": {
+					"*.pseudo": "plaintext"
+				},
+				"files.watcherExclude": {
+					"**/.git/objects/**": true,
+					"**/.git/subtree-cache/**": true,
+					"**/node_modules/*/**": true,
+					"**/.hg/store/**": true
+				}
+			}
+		}
+	},
+
+	"remoteUser": "vscode",
+	
+	"remoteEnv": {
+		"CHOKIDAR_USEPOLLING": "true",
+		"CHOKIDAR_INTERVAL": "1000",
+		"WATCHPACK_POLLING": "true",
+		"NEXT_TELEMETRY_DISABLED": "1",
+		"NODE_ENV": "development",
+		"NEXT_WEBPACK_USEPOLLING": "1000",
+		"WATCHPACK_POLLING_INTERVAL": "300",
+		"WEBPACK_WATCH_POLL": "300",
+		"WATCHMAN_SOCK_PATH": "/home/vscode/.config/watchman",
+		"NPM_GLOBAL": "/usr/local/share/npm-global",
+		"PATH": "/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/home/vscode/.local/bin:${containerEnv:PATH}",
+		"FAST_REFRESH": "false"
+	},
+
+	"mounts": [
+		"type=bind,source=${localWorkspaceFolder},target=/workspace,consistency=consistent"
+	],
+
+	"updateRemoteUserUID": true
+}
