@@ -27,7 +27,7 @@ interface LineProps {
 const CodeLine: FC<LineProps> = ({ number, content, hasBreakpoint, isCurrentLine, onToggleBreakpoint }) => {
   return (
     <div 
-      className={`flex w-full hover:bg-gray-800/30 cursor-pointer items-center whitespace-nowrap
+      className={`flex w-full hover:bg-gray-800/30 cursor-pointer items-center whitespace-nowrap relative
         ${isCurrentLine ? 'bg-blue-500/20' : ''}
         ${hasBreakpoint ? 'bg-red-800/10' : ''}`}
       onClick={async () => {
@@ -37,7 +37,14 @@ const CodeLine: FC<LineProps> = ({ number, content, hasBreakpoint, isCurrentLine
       style={{ fontFamily: MONO_FONT }}
     >
       {/* Fixed-width left section for line number and breakpoint */}
-      <div className="flex-none w-[88px] flex items-center">
+      <div className="flex-none w-[88px] flex items-center relative">
+        {/* Arrow marker before line number */}
+        {isCurrentLine && (
+          <div className="absolute left-0 text-blue-400">
+            →
+          </div>
+        )}
+        
         {/* Breakpoint area */}
         <div className="w-10 flex items-center justify-center">
           {hasBreakpoint && (
@@ -54,7 +61,7 @@ const CodeLine: FC<LineProps> = ({ number, content, hasBreakpoint, isCurrentLine
       {/* Code content with no wrapping */}
       <div className="flex-1 py-1 overflow-hidden">
         <code className="block whitespace-pre">
-          {isCurrentLine && '→ '}{content}
+          {content}
         </code>
       </div>
     </div>
@@ -109,31 +116,6 @@ const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
   );
 };
 
-interface ConceptsPanelProps {
-  currentLine: number | null;
-  content: string[];
-}
-
-const ConceptsPanel: FC<ConceptsPanelProps> = ({ currentLine, content }) => {
-  if (!currentLine || !conceptsMap[currentLine]) return null;
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gray-800 text-gray-100 border-t border-gray-700 shadow-lg">
-      <div className="container max-w-7xl mx-auto">
-        <div className="p-4">
-          <h3 className="text-sm font-semibold text-white mb-2">Concept Explanation</h3>
-          <div className="text-sm">
-            <div className="mb-2">
-              <span className="text-blue-300">Line {currentLine}:</span> {content[currentLine - 1]}
-            </div>
-            <p className="text-gray-300">{conceptsMap[currentLine]}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const PseudoCodeViewer: FC = () => {
   console.log('PseudoCodeViewer rendered at:', new Date().toISOString());
   
@@ -148,9 +130,13 @@ export const PseudoCodeViewer: FC = () => {
     isPaused: false,
     variables: []
   });
-  const [codeViewerWidth, setCodeViewerWidth] = useState<number>(800);
-  const [variablesPanelWidth, setVariablesPanelWidth] = useState<number>(350);
-  const [conceptsPanelHeight, setConceptsPanelHeight] = useState<number>(200);
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(300);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState<number>(
+    typeof window !== 'undefined' ? window.innerHeight * 0.3 : 200
+  );
+  const [codeViewerWidth, setCodeViewerWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth - 550 : 800
+  );
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -209,6 +195,18 @@ export const PseudoCodeViewer: FC = () => {
     debuggerState.breakpoints,
     pseudoContent
   ]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Update bottom panel height when window resizes
+      const handleResize = () => {
+        setBottomPanelHeight(window.innerHeight * 0.3);
+      };
+
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     setIsLoading(true)
@@ -453,176 +451,196 @@ export const PseudoCodeViewer: FC = () => {
     ) || pseudoContent.sections[0];
 
     return (
-      <div className="space-y-4">
-        {/* Debugging controls */}
-        <div className="flex gap-4 mb-4">
-          {!debuggerState.isDebugging ? (
-            <button
-              onClick={startDebugging}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded hover:bg-editor-button-start-hover transition-colors"
-              disabled={debuggerState.breakpoints.size === 0}
-              title="Start debugging"
-            >
-              Start Debugging (F5)
-            </button>
-          ) : (
-            <>
+      <div className="flex flex-col h-full relative">
+        {/* Main content area */}
+        <div className="flex flex-1 min-h-0">
+          {/* Main editor area */}
+          <div className="flex-1 flex flex-col min-w-0 h-full">
+            {/* Toolbar */}
+            <div className="flex gap-2 p-2 bg-gray-800 border-b border-gray-700">
               <button
-                onClick={continueToNextBreakpoint}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded hover:bg-editor-button-continue-hover transition-colors"
-                disabled={!debuggerState.isPaused}
-                title="Continue execution until next breakpoint"
+                className={`px-3 py-1 rounded text-sm ${
+                  debuggerState.isDebugging
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                onClick={debuggerState.isDebugging ? stopDebugging : startDebugging}
+                disabled={debuggerState.breakpoints.size === 0}
               >
-                Continue (F5)
+                {debuggerState.isDebugging ? 'Stop' : 'Start'} Debugging
               </button>
               <button
-                onClick={stepNextLine}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded hover:bg-editor-button-step-hover transition-colors"
-                disabled={!debuggerState.isPaused}
-                title="Step to next line"
+                className="px-3 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600 text-white"
+                onClick={clearAllBreakpoints}
+                disabled={debuggerState.isDebugging}
               >
-                Step Line (F10)
+                Clear Breakpoints
               </button>
-              <button
-                onClick={stopDebugging}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded hover:bg-editor-button-stop-hover transition-colors"
-                title="Stop debugging"
-              >
-                Stop (Shift+F5)
-              </button>
-            </>
-          )}
-          <button
-            onClick={clearAllBreakpoints}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded hover:bg-editor-button-neutral-hover transition-colors"
-            disabled={debuggerState.isDebugging}
-            title="Remove all breakpoints"
-          >
-            Clear Breakpoints
-          </button>
-        </div>
+            </div>
 
-        {/* Main content area with flex layout and overflow handling */}
-        <div className="flex gap-4 min-w-0 h-full">
-          {/* Code viewer with horizontal scroll */}
-          <ResizablePanel onResize={(delta) => setCodeViewerWidth(prev => Math.max(300, prev + delta))}>
-            <div 
-              style={{ width: `${codeViewerWidth}px` }}
-              className="h-full bg-gray-900 text-gray-100 rounded-lg shadow-xl border border-gray-700"
-            >
-              <div className="overflow-x-auto h-full">
-                <div className="min-w-full">
-                  {currentSection.content.map((line: string, index: number) => (
-                    <CodeLine
-                      key={index}
-                      number={index + 1}
-                      content={line}
-                      hasBreakpoint={debuggerState.breakpoints.has(index + 1)}
-                      isCurrentLine={debuggerState.currentLine === index + 1}
-                      onToggleBreakpoint={toggleBreakpoint}
-                    />
-                  ))}
+            {/* Code content */}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full bg-gray-900 text-gray-100">
+                <div className="overflow-x-auto h-full">
+                  <div className="min-w-full">
+                    {currentSection.content.map((line: string, index: number) => (
+                      <CodeLine
+                        key={index}
+                        number={index + 1}
+                        content={line}
+                        hasBreakpoint={debuggerState.breakpoints.has(index + 1)}
+                        isCurrentLine={debuggerState.currentLine === index + 1}
+                        onToggleBreakpoint={toggleBreakpoint}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </ResizablePanel>
+          </div>
 
-          {/* Variables Panel */}
+          {/* Right panel for variables */}
           {debuggerState.isPaused && (
-            <ResizablePanel onResize={(delta) => setVariablesPanelWidth(prev => Math.max(200, Math.min(800, prev - delta)))}>
+            <div 
+              style={{ width: `${rightPanelWidth}px` }}
+              className="h-full bg-gray-900 border-l border-gray-700 relative"
+            >
+              {/* Add horizontal drag handle */}
               <div 
-                style={{ width: `${variablesPanelWidth}px` }} 
-                className="h-full overflow-hidden"
-              >
-                <VariablesPanel variables={debuggerState.variables} />
+                className="absolute left-0 top-0 bottom-0 w-1 bg-gray-700 cursor-ew-resize hover:bg-blue-500/50"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const startX = e.clientX;
+                  const startWidth = rightPanelWidth;
+
+                  const handleMouseMove = (moveEvent: MouseEvent) => {
+                    const deltaX = startX - moveEvent.clientX;
+                    const newWidth = startWidth + deltaX;
+                    setRightPanelWidth(Math.max(250, Math.min(800, newWidth)));
+                  };
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                  };
+
+                  document.addEventListener('mousemove', handleMouseMove);
+                  document.addEventListener('mouseup', handleMouseUp);
+                }}
+              />
+
+              {/* Panel content */}
+              <div className="h-full">
+                <div className="bg-gray-800 px-4 py-2 font-medium text-sm">
+                  Variables
+                </div>
+                <div className="overflow-auto h-[calc(100%-2.5rem)]">
+                  <VariablesPanel variables={debuggerState.variables} />
+                </div>
               </div>
-            </ResizablePanel>
+            </div>
           )}
         </div>
+
+        {/* Bottom panel for concepts */}
+        {debuggerState.isPaused && debuggerState.currentLine && (
+          <div 
+            className="absolute bottom-0 left-0 right-0 bg-gray-900"
+            style={{ 
+              height: `${bottomPanelHeight}px`,
+              maxHeight: '70vh',
+              minHeight: '100px'
+            }}
+          >
+            <div className="relative h-full">
+              {/* Add drag handle at the top */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-1 bg-gray-700 cursor-ns-resize hover:bg-blue-500/50"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const startY = e.clientY;
+                  const startHeight = bottomPanelHeight;
+
+                  const handleMouseMove = (moveEvent: MouseEvent) => {
+                    const deltaY = startY - moveEvent.clientY;
+                    const newHeight = startHeight + deltaY;
+                    setBottomPanelHeight(Math.max(100, Math.min(window.innerHeight * 0.7, newHeight)));
+                  };
+
+                  const handleMouseUp = () => {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                  };
+
+                  document.addEventListener('mousemove', handleMouseMove);
+                  document.addEventListener('mouseup', handleMouseUp);
+                }}
+              />
+
+              {/* Panel content */}
+              <div className="w-full h-full bg-gray-900 border-t border-gray-700">
+                {/* Panel header */}
+                <div className="flex items-center justify-between bg-gray-800 px-4 py-2 border-b border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm text-gray-200">Concepts</span>
+                    <span className="text-sm text-gray-400">Line {debuggerState.currentLine}</span>
+                  </div>
+                </div>
+                
+                {/* Panel content */}
+                <div className="overflow-auto p-4" style={{ height: 'calc(100% - 40px)' }}>
+                  <div className="text-sm space-y-3">
+                    <div className="text-gray-300 font-mono bg-gray-800/50 p-2 rounded">
+                      {currentSection.content[debuggerState.currentLine - 1]}
+                    </div>
+                    {conceptsMap[debuggerState.currentLine] && (
+                      <p className="text-gray-400">
+                        {conceptsMap[debuggerState.currentLine]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="container max-w-7xl mx-auto p-4 bg-slate-900 min-w-0 h-screen">
-      {/* File input and controls */}
-      <div className="space-y-4 mb-4">
+    <div className="h-screen flex flex-col bg-gray-900">
+      {/* Top bar */}
+      <div className="bg-gray-800 p-2 border-b border-gray-700">
         <input
           type="file"
           accept=".pseudo"
           onChange={handleFileUpload}
-          className="block w-full p-2"
+          className="text-sm text-gray-300"
         />
-        
-        {error && (
-          <div className="bg-red-100 border border-red-500 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
         {pseudoContent && (
           <select
             value={selectedLevel}
             onChange={(e) => setSelectedLevel(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded"
+            className="ml-4 bg-gray-700 text-gray-300 px-2 py-1 rounded text-sm"
           >
             {pseudoContent.abstraction_levels.map((level: string) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
+              <option key={level} value={level}>{level}</option>
             ))}
           </select>
         )}
       </div>
 
-      {/* Loading state */}
-      {isLoading && (
-        <div className="text-center py-4 text-gray-600">
-          <span>Loading...</span>
-        </div>
-      )}
-
-      {/* Main content area with vertical layout */}
-      {!isLoading && (
-        <div className="flex flex-col h-[calc(100vh-200px)]">
-          {/* Top section with code and variables */}
-          <div className="flex-1 min-h-0">
-            {renderContent()}
+      {/* Main content */}
+      <div className="flex-1 overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            Loading...
           </div>
-
-          {/* Bottom section with concepts panel */}
-          {debuggerState.isPaused && pseudoContent && (
-            <ResizablePanel 
-              direction="horizontal" 
-              onResize={(delta) => setConceptsPanelHeight(prev => Math.max(100, Math.min(400, prev - delta)))}
-            >
-              <div 
-                style={{ height: `${conceptsPanelHeight}px` }}
-                className="w-full bg-gray-800 text-gray-100 rounded-lg border border-gray-700 mt-4"
-              >
-                <div className="bg-gray-700 px-4 py-2 border-b border-gray-600">
-                  <h3 className="text-sm font-semibold text-white">Concepts</h3>
-                </div>
-                <div className="p-4 overflow-y-auto" style={{ height: `calc(${conceptsPanelHeight}px - 40px)` }}>
-                  <div className="mb-2">
-                    <span className="text-blue-300">
-                      Line {debuggerState.currentLine}:
-                    </span>{' '}
-                    {debuggerState.currentLine && pseudoContent.sections.find(
-                      section => section.level === selectedLevel
-                    )?.content[debuggerState.currentLine - 1]}
-                  </div>
-                  {debuggerState.currentLine && conceptsMap[debuggerState.currentLine] && (
-                    <p className="text-gray-300">
-                      {conceptsMap[debuggerState.currentLine]}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </ResizablePanel>
-          )}
-        </div>
-      )}
+        ) : (
+          renderContent()
+        )}
+      </div>
     </div>
-  )
+  );
 } 
