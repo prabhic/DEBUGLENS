@@ -1,0 +1,714 @@
+{
+  "feature": {
+    "name": "Git Internal Operations",
+    "description": "Understanding Git's core operations and data structures",
+    "source": "git/git source code learning",
+    "categories": {
+      "Basics": {
+        "scenarios": ["Object Storage", "Simple Commits"],
+        "complexity": "Beginner"
+      },
+      "Advanced": {
+        "scenarios": ["Merging", "Rebasing", "Cherry-picking"],
+        "complexity": "Advanced" 
+      },
+      "Internals": {
+        "scenarios": ["Hash Objects", "Pack Files", "Refs"],
+        "complexity": "Expert"
+      }
+    },
+    "flows": [
+      {
+        "name": "Object Storage",
+        "complexity": "Basic",
+        "time": "5 mins",
+        "prerequisites": "None"
+      },
+      {
+        "name": "Commit Creation",
+        "complexity": "Basic", 
+        "time": "8 mins",
+        "prerequisites": "Object Storage"
+      },
+      {
+        "name": "Merge Process",
+        "complexity": "Advanced",
+        "time": "10 mins",
+        "prerequisites": "Commit Creation"
+      },
+      {
+        "name": "Rebase Operation",
+        "complexity": "Advanced",
+        "time": "15 mins",
+        "prerequisites": "Merge Process"
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "Git Object Storage Internals",
+        "description": "How Git stores content in its object database",
+        "tag": "BasicScenario",
+        "steps": [
+          {
+            "name": "Initialize Repository Structure",
+            "entryPoint": "Initialize empty repository",
+            "regions": [
+              {
+                "name": "Repository Setup",
+                "breakpoints": [
+                  {
+                    "name": "Initial Structure",
+                    "code": [
+                      "repo = {",
+                      "  \"latest_commit\": None,", 
+                      "  \"refs\": {\"HEAD\": None, \"main\": None},",
+                      "  \"objects\": {}",
+                      "}"
+                    ],
+                    "variables": [
+                      {
+                        "name": "repo",
+                        "previous": null,
+                        "current": "{latest_commit:None}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "Repository State"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Git Repository Structure",
+                      "points": [
+                        "Objects Database: Stores all content",
+                        "References (refs): Point to commits",
+                        "HEAD: Current position"
+                      ],
+                      "focus": "Setting up empty repository"
+                    }
+                  },
+                  {
+                    "name": "Collections Init",
+                    "code": [
+                      "commits = []",
+                      "blobs = []", 
+                      "trees = []"
+                    ],
+                    "variables": [
+                      {
+                        "name": "commits",
+                        "previous": null,
+                        "current": "[]",
+                        "type": "Array",
+                        "changed": true,
+                        "important": "History Storage"
+                      },
+                      {
+                        "name": "blobs",
+                        "previous": null,
+                        "current": "[]",
+                        "type": "Array", 
+                        "changed": true,
+                        "important": "Content Storage"
+                      },
+                      {
+                        "name": "trees",
+                        "previous": null,
+                        "current": "[]",
+                        "type": "Array",
+                        "changed": true,
+                        "important": "Directory Structure"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Git Storage Collections",
+                      "points": [
+                        "Commits track history",
+                        "Blobs store file contents",
+                        "Trees represent directories"
+                      ],
+                      "focus": "Preparing storage structures"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Create Blobs",
+            "regions": [
+              {
+                "name": "Content Storage",
+                "breakpoints": [
+                  {
+                    "name": "Define Changes",
+                    "code": [
+                      "changes = [",
+                      "  {\"path\": \"README.md\", \"content\": \"# Project\"},",
+                      "  {\"path\": \"main.py\", \"content\": \"print('hello')\"}",
+                      "]"
+                    ],
+                    "variables": []
+                  },
+                  {
+                    "name": "Blob Creation Loop",
+                    "code": [
+                      "for file in changes:"
+                    ]
+                  },
+                  {
+                    "name": "Hash Calculation",
+                    "code": [
+                      "content_hash = calculate_hash(file[\"content\"])"
+                    ],
+                    "variables": [
+                      {
+                        "name": "content_hash",
+                        "previous": null,
+                        "current": "8c7e5a...",
+                        "type": "string",
+                        "changed": true,
+                        "important": "Content ID"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Blob Storage",
+                    "code": [
+                      "blob = {",
+                      "  \"type\": \"blob\",",
+                      "  \"content\": file[\"content\"],",
+                      "  \"hash\": content_hash",
+                      "}",
+                      "blobs.append(blob)",
+                      "repo[\"objects\"][content_hash] = blob"
+                    ],
+                    "variables": [
+                      {
+                        "name": "blob",
+                        "previous": null,
+                        "current": "{type: \"blob\"}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "Storage Unit"
+                      },
+                      {
+                        "name": "objects",
+                        "previous": "{}",
+                        "current": "{8c7e5a: {...}}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "Object DB"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Blob Creation Process",
+                      "points": [
+                        "Content addressing using SHA-1",
+                        "Immutable storage",
+                        "Content deduplication"
+                      ],
+                      "focus": "How Git identifies unique content"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Build Tree",
+            "regions": [
+              {
+                "name": "Directory Structure",
+                "breakpoints": [
+                  {
+                    "name": "Tree Creation",
+                    "code": [
+                      "tree = {",
+                      "  \"type\": \"tree\",",
+                      "  \"entries\": [],",
+                      "  \"hash\": None",
+                      "}"
+                    ],
+                    "variables": [
+                      {
+                        "name": "tree",
+                        "previous": null,
+                        "current": "{type:\"tree\"}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "Directory State"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Add Entries",
+                    "code": [
+                      "for idx, file in enumerate(changes):",
+                      "  tree[\"entries\"].append({",
+                      "    \"mode\": \"100644\",",
+                      "    \"path\": file[\"path\"],",
+                      "    \"hash\": blobs[idx][\"hash\"]",
+                      "  })"
+                    ],
+                    "variables": [
+                      {
+                        "name": "tree.entries",
+                        "previous": "[]",
+                        "current": "[{mode,path}]",
+                        "type": "Array",
+                        "changed": true,
+                        "important": "File References"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Finalize Tree",
+                    "code": [
+                      "tree[\"hash\"] = calculate_hash(str(tree[\"entries\"]))",
+                      "trees.append(tree)",
+                      "repo[\"objects\"][tree[\"hash\"]] = tree"
+                    ],
+                    "variables": [
+                      {
+                        "name": "tree.hash",
+                        "previous": null,
+                        "current": "7de3fa...",
+                        "type": "string",
+                        "changed": true,
+                        "important": "Tree Identity"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Tree Structure",
+                      "points": [
+                        "Represents directory state",
+                        "Links to blobs (files)",
+                        "Modes indicate type/permissions"
+                      ],
+                      "focus": "Building directory structure"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Create Commit",
+            "regions": [
+              {
+                "name": "Commit Creation",
+                "breakpoints": [
+                  {
+                    "name": "Initialize Commit",
+                    "code": [
+                      "commit = {",
+                      "  \"type\": \"commit\",",
+                      "  \"tree\": tree[\"hash\"],",
+                      "  \"parent\": repo[\"latest_commit\"],",
+                      "  \"author\": \"Dev <dev@example.com>\",",
+                      "  \"message\": \"Initial commit\",",
+                      "  \"hash\": None",
+                      "}"
+                    ],
+                    "variables": [
+                      {
+                        "name": "commit",
+                        "previous": null,
+                        "current": "{type:\"commit\"}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "History Record"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Finalize Commit",
+                    "code": [
+                      "commit[\"hash\"] = calculate_hash(str(commit))",
+                      "commits.append(commit)",
+                      "repo[\"objects\"][commit[\"hash\"]] = commit"
+                    ],
+                    "variables": [
+                      {
+                        "name": "commit.hash",
+                        "previous": null,
+                        "current": "abc123...",
+                        "type": "string",
+                        "changed": true,
+                        "important": "Commit Identity"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Update References",
+                    "code": [
+                      "repo[\"latest_commit\"] = commit[\"hash\"]",
+                      "repo[\"refs\"][\"main\"] = commit[\"hash\"]",
+                      "repo[\"refs\"][\"HEAD\"] = \"ref: refs/heads/main\""
+                    ],
+                    "variables": [
+                      {
+                        "name": "refs.main",
+                        "previous": null,
+                        "current": "abc123...",
+                        "type": "string",
+                        "changed": true,
+                        "important": "Branch Position"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Commit Structure",
+                      "points": [
+                        "Points to tree (content state)",
+                        "Links to parent (history)",
+                        "Contains metadata"
+                      ],
+                      "focus": "Creating history record"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Git Merge Process",
+        "description": "How Git merges changes between branches",
+        "tag": "AdvancedScenario",
+        "steps": [
+          {
+            "name": "Load Branch States",
+            "regions": [
+              {
+                "name": "Branch State Loading",
+                "breakpoints": [
+                  {
+                    "name": "Current Branch State",
+                    "code": [
+                      "current_branch = {",
+                      "  \"name\": \"main\",",
+                      "  \"head\": \"abc123\",",
+                      "  \"commit\": repo[\"objects\"][\"abc123\"]",
+                      "}"
+                    ],
+                    "variables": [
+                      {
+                        "name": "current_branch",
+                        "previous": null,
+                        "current": "{name:\"main\"}",
+                        "type": "Branch",
+                        "changed": true,
+                        "important": "Base for merge"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Branch States",
+                      "points": [
+                        "Each branch points to a commit",
+                        "Commits point to content trees", 
+                        "Trees represent directory state"
+                      ],
+                      "focus": "Loading branch states for comparison"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Find Common Ancestor",
+            "regions": [
+              {
+                "name": "Ancestor Analysis",
+                "breakpoints": [
+                  {
+                    "name": "Initialize Search",
+                    "code": [
+                      "commit_queue = [current_branch[\"commit\"], target_branch[\"commit\"]]",
+                      "visited = set()"
+                    ],
+                    "variables": []
+                  },
+                  {
+                    "name": "Search Loop",
+                    "code": [
+                      "while commit_queue:",
+                      "  commit = commit_queue.pop(0)",
+                      "  if commit[\"hash\"] in visited:"
+                    ],
+                    "variables": [
+                      {
+                        "name": "commit_queue",
+                        "previous": "[2]",
+                        "current": "[1]",
+                        "type": "Array",
+                        "changed": true,
+                        "important": "Search Progress"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Found Common Ancestor",
+                    "code": [
+                      "merge_base = commit",
+                      "break",
+                      "",
+                      "visited.add(commit[\"hash\"])",
+                      "if commit[\"parent\"]:",
+                      "  commit_queue.append(repo[\"objects\"][commit[\"parent\"]])"
+                    ],
+                    "variables": [
+                      {
+                        "name": "merge_base",
+                        "previous": "null",
+                        "current": "{hash:xyz}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "Merge Start Point"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Merge Base Discovery",
+                      "points": [
+                        "Latest common commit",
+                        "Reference point for changes",
+                        "Base for three-way merge"
+                      ],
+                      "focus": "Finding divergence point"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Compare Changes",
+            "regions": [
+              {
+                "name": "Change Detection",
+                "breakpoints": [
+                  {
+                    "name": "Initialize Comparison",
+                    "code": [
+                      "changes = {",
+                      "  \"added\": set(),",
+                      "  \"modified\": set(),",
+                      "  \"deleted\": set(),",
+                      "  \"conflicts\": set()",
+                      "}"
+                    ],
+                    "variables": []
+                  },
+                  {
+                    "name": "Compare Trees",
+                    "code": [
+                      "def compare_trees(base, current, target):",
+                      "  all_paths = set(base.keys()) | set(current.keys()) | set(target.keys())",
+                      "",
+                      "  for path in all_paths:",
+                      "    base_hash = base.get(path, {}).get(\"hash\")",
+                      "    current_hash = current.get(path, {}).get(\"hash\")",
+                      "    target_hash = target.get(path, {}).get(\"hash\")"
+                    ],
+                    "variables": []
+                  },
+                  {
+                    "name": "Change Analysis",
+                    "code": [
+                      "if base_hash == current_hash == target_hash:",
+                      "  continue",
+                      "elif base_hash == current_hash:",
+                      "  changes[\"added\"].add(path)",
+                      "elif base_hash == target_hash:",
+                      "  continue",
+                      "else:",
+                      "  changes[\"conflicts\"].add(path)"
+                    ],
+                    "variables": [
+                      {
+                        "name": "changes.added",
+                        "previous": "set()",
+                        "current": "{\"file1\"}",
+                        "type": "Set",
+                        "changed": true,
+                        "important": "New Files"
+                      },
+                      {
+                        "name": "changes.conflicts",
+                        "previous": "set()",
+                        "current": "{\"README.md\"}",
+                        "type": "Set",
+                        "changed": true,
+                        "important": "Need Resolution"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Three-Way Comparison",
+                      "points": [
+                        "Compare base with both branches",
+                        "Detect type of changes",
+                        "Identify conflicts"
+                      ],
+                      "focus": "Analyzing changes between branches"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Merge Trees",
+            "regions": [
+              {
+                "name": "Tree Merging",
+                "breakpoints": [
+                  {
+                    "name": "Initialize Merged Tree",
+                    "code": [
+                      "merged_tree = {",
+                      "  \"type\": \"tree\",",
+                      "  \"entries\": [],",
+                      "  \"hash\": None",
+                      "}"
+                    ],
+                    "variables": [
+                      {
+                        "name": "merged_tree",
+                        "previous": "null",
+                        "current": "{type:\"tree\"}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "Combined State"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Process Changes",
+                    "code": [
+                      "for path in all_paths:",
+                      "  if path in changes[\"conflicts\"]:",
+                      "    content = generate_conflict_markers(",
+                      "      current_tree[path],",
+                      "      target_tree[path]",
+                      "    )",
+                      "    store_blob_and_add_entry(merged_tree, path, content)",
+                      "  else:",
+                      "    content = get_content_for_path(path, current_tree, target_tree)",
+                      "    store_blob_and_add_entry(merged_tree, path, content)"
+                    ],
+                    "variables": [
+                      {
+                        "name": "conflicts",
+                        "previous": "0",
+                        "current": "2",
+                        "type": "number",
+                        "changed": true,
+                        "important": "Need Resolution"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Finalize Tree",
+                    "code": [
+                      "merged_tree[\"hash\"] = calculate_hash(str(merged_tree[\"entries\"]))",
+                      "repo[\"objects\"][merged_tree[\"hash\"]] = merged_tree"
+                    ],
+                    "variables": [],
+                    "concepts": {
+                      "title": "Tree Merging Process",
+                      "points": [
+                        "Combine changes from both branches",
+                        "Handle conflicts with markers",
+                        "Create new tree object"
+                      ],
+                      "focus": "Building merged content state"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Create Merge Commit",
+            "regions": [
+              {
+                "name": "Merge Commit Creation",
+                "breakpoints": [
+                  {
+                    "name": "Build Commit",
+                    "code": [
+                      "merge_commit = {",
+                      "  \"type\": \"commit\",",
+                      "  \"tree\": merged_tree[\"hash\"],",
+                      "  \"parents\": [",
+                      "    current_branch[\"head\"],",
+                      "    target_branch[\"head\"]",
+                      "  ],",
+                      "  \"author\": \"Dev <dev@example.com>\",",
+                      "  \"message\": f\"Merge {target_branch['name']} into {current_branch['name']}\",",
+                      "  \"hash\": None",
+                      "}"
+                    ],
+                    "variables": [
+                      {
+                        "name": "merge_commit",
+                        "previous": "null",
+                        "current": "{type:\"commit\"}",
+                        "type": "Dictionary",
+                        "changed": true,
+                        "important": "Merge Record"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Finalize Commit",
+                    "code": [
+                      "merge_commit[\"hash\"] = calculate_hash(str(merge_commit))",
+                      "repo[\"objects\"][merge_commit[\"hash\"]] = merge_commit"
+                    ],
+                    "variables": [
+                      {
+                        "name": "parents",
+                        "previous": "null",
+                        "current": "[hash1, hash2]",
+                        "type": "Array",
+                        "changed": true,
+                        "important": "History Links"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Update References",
+                    "code": [
+                      "repo[\"refs\"][current_branch[\"name\"]] = merge_commit[\"hash\"]",
+                      "repo[\"refs\"][\"HEAD\"] = f\"ref: refs/heads/{current_branch['name']}\""
+                    ],
+                    "variables": [
+                      {
+                        "name": "refs.main",
+                        "previous": "abc123",
+                        "current": "def789",
+                        "type": "string",
+                        "changed": true,
+                        "important": "Branch Update"
+                      }
+                    ],
+                    "concepts": {
+                      "title": "Merge Commit Special Features",
+                      "points": [
+                        "Multiple parent commits",
+                        "Combined tree state",
+                        "Updated branch reference"
+                      ],
+                      "focus": "Recording merge in history"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

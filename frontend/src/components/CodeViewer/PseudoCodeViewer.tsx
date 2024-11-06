@@ -4,6 +4,7 @@ import React, { useState, FC, useEffect } from 'react'
 import { PseudoContent, PseudoSection, DebuggerState, VariableState } from '@/types/pseudo'
 import { setBreakpoint } from '@/services/debugService';
 import { ResizablePanel } from './ResizablePanel';
+import { DebugToolbar } from './DebugToolbar';
 
 const MONO_FONT = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
 
@@ -116,7 +117,12 @@ const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
   );
 };
 
-export const PseudoCodeViewer: FC = () => {
+interface PseudoCodeViewerProps {
+  initialContent: string;
+  onReset: () => void;
+}
+
+export const PseudoCodeViewer: FC<PseudoCodeViewerProps> = ({ initialContent, onReset }) => {
   console.log('PseudoCodeViewer rendered at:', new Date().toISOString());
   
   const [pseudoContent, setPseudoContent] = useState<PseudoContent | null>(null)
@@ -207,6 +213,20 @@ export const PseudoCodeViewer: FC = () => {
       return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
+
+  useEffect(() => {
+    if (initialContent) {
+      const pseudoData: PseudoContent = {
+        abstraction_levels: ['default'],
+        sections: [{
+          level: 'default',
+          content: initialContent.split('\n')
+        }]
+      };
+      setPseudoContent(pseudoData);
+      setSelectedLevel('default');
+    }
+  }, [initialContent]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     setIsLoading(true)
@@ -452,154 +472,75 @@ export const PseudoCodeViewer: FC = () => {
 
     return (
       <div className="flex flex-col h-full relative">
-        {/* Main content area */}
-        <div className="flex flex-1 min-h-0">
-          {/* Main editor area */}
-          <div className="flex-1 flex flex-col min-w-0 h-full">
-            {/* Toolbar */}
-            <div className="flex gap-2 p-2 bg-gray-800 border-b border-gray-700">
-              <button
-                className={`px-3 py-1 rounded text-sm ${
-                  debuggerState.isDebugging
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-                onClick={debuggerState.isDebugging ? stopDebugging : startDebugging}
-                disabled={debuggerState.breakpoints.size === 0}
-              >
-                {debuggerState.isDebugging ? 'Stop' : 'Start'} Debugging
-              </button>
-              <button
-                className="px-3 py-1 rounded text-sm bg-gray-700 hover:bg-gray-600 text-white"
-                onClick={clearAllBreakpoints}
-                disabled={debuggerState.isDebugging}
-              >
-                Clear Breakpoints
-              </button>
-            </div>
+        {/* Debug Toolbar */}
+        <DebugToolbar
+          isDebugging={debuggerState.isDebugging}
+          isPaused={debuggerState.isPaused}
+          hasBreakpoints={debuggerState.breakpoints.size > 0}
+          onStartDebugging={startDebugging}
+          onStopDebugging={stopDebugging}
+          onContinue={continueToNextBreakpoint}
+          onStepOver={stepNextLine}
+          onClearBreakpoints={clearAllBreakpoints}
+        />
 
-            {/* Code content */}
-            <div className="flex-1 overflow-hidden">
-              <div className="h-full bg-gray-900 text-gray-100">
-                <div className="overflow-x-auto h-full">
-                  <div className="min-w-full">
-                    {currentSection.content.map((line: string, index: number) => (
-                      <CodeLine
-                        key={index}
-                        number={index + 1}
-                        content={line}
-                        hasBreakpoint={debuggerState.breakpoints.has(index + 1)}
-                        isCurrentLine={debuggerState.currentLine === index + 1}
-                        onToggleBreakpoint={toggleBreakpoint}
-                      />
-                    ))}
-                  </div>
-                </div>
+        {/* Code content */}
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full bg-gray-900 text-gray-100">
+            <div className="overflow-x-auto h-full">
+              <div className="min-w-full">
+                {currentSection.content.map((line: string, index: number) => (
+                  <CodeLine
+                    key={index}
+                    number={index + 1}
+                    content={line}
+                    hasBreakpoint={debuggerState.breakpoints.has(index + 1)}
+                    isCurrentLine={debuggerState.currentLine === index + 1}
+                    onToggleBreakpoint={toggleBreakpoint}
+                  />
+                ))}
               </div>
             </div>
           </div>
-
-          {/* Right panel for variables */}
-          {debuggerState.isPaused && (
-            <div 
-              style={{ width: `${rightPanelWidth}px` }}
-              className="h-full bg-gray-900 border-l border-gray-700 relative"
-            >
-              {/* Add horizontal drag handle */}
-              <div 
-                className="absolute left-0 top-0 bottom-0 w-1 bg-gray-700 cursor-ew-resize hover:bg-blue-500/50"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  const startX = e.clientX;
-                  const startWidth = rightPanelWidth;
-
-                  const handleMouseMove = (moveEvent: MouseEvent) => {
-                    const deltaX = startX - moveEvent.clientX;
-                    const newWidth = startWidth + deltaX;
-                    setRightPanelWidth(Math.max(250, Math.min(800, newWidth)));
-                  };
-
-                  const handleMouseUp = () => {
-                    document.removeEventListener('mousemove', handleMouseMove);
-                    document.removeEventListener('mouseup', handleMouseUp);
-                  };
-
-                  document.addEventListener('mousemove', handleMouseMove);
-                  document.addEventListener('mouseup', handleMouseUp);
-                }}
-              />
-
-              {/* Panel content */}
-              <div className="h-full">
-                <div className="bg-gray-800 px-4 py-2 font-medium text-sm">
-                  Variables
-                </div>
-                <div className="overflow-auto h-[calc(100%-2.5rem)]">
-                  <VariablesPanel variables={debuggerState.variables} />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Bottom panel for concepts */}
-        {debuggerState.isPaused && debuggerState.currentLine && (
+        {/* Right panel for variables */}
+        {debuggerState.isPaused && (
           <div 
-            className="absolute bottom-0 left-0 right-0 bg-gray-900"
-            style={{ 
-              height: `${bottomPanelHeight}px`,
-              maxHeight: '70vh',
-              minHeight: '100px'
-            }}
+            style={{ width: `${rightPanelWidth}px` }}
+            className="h-full bg-gray-900 border-l border-gray-700 relative"
           >
-            <div className="relative h-full">
-              {/* Add drag handle at the top */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-1 bg-gray-700 cursor-ns-resize hover:bg-blue-500/50"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  const startY = e.clientY;
-                  const startHeight = bottomPanelHeight;
+            {/* Add horizontal drag handle */}
+            <div 
+              className="absolute left-0 top-0 bottom-0 w-1 bg-gray-700 cursor-ew-resize hover:bg-blue-500/50"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = rightPanelWidth;
 
-                  const handleMouseMove = (moveEvent: MouseEvent) => {
-                    const deltaY = startY - moveEvent.clientY;
-                    const newHeight = startHeight + deltaY;
-                    setBottomPanelHeight(Math.max(100, Math.min(window.innerHeight * 0.7, newHeight)));
-                  };
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const deltaX = startX - moveEvent.clientX;
+                  const newWidth = startWidth + deltaX;
+                  setRightPanelWidth(Math.max(250, Math.min(800, newWidth)));
+                };
 
-                  const handleMouseUp = () => {
-                    document.removeEventListener('mousemove', handleMouseMove);
-                    document.removeEventListener('mouseup', handleMouseUp);
-                  };
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove);
+                  document.removeEventListener('mouseup', handleMouseUp);
+                };
 
-                  document.addEventListener('mousemove', handleMouseMove);
-                  document.addEventListener('mouseup', handleMouseUp);
-                }}
-              />
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+              }}
+            />
 
-              {/* Panel content */}
-              <div className="w-full h-full bg-gray-900 border-t border-gray-700">
-                {/* Panel header */}
-                <div className="flex items-center justify-between bg-gray-800 px-4 py-2 border-b border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm text-gray-200">Concepts</span>
-                    <span className="text-sm text-gray-400">Line {debuggerState.currentLine}</span>
-                  </div>
-                </div>
-                
-                {/* Panel content */}
-                <div className="overflow-auto p-4" style={{ height: 'calc(100% - 40px)' }}>
-                  <div className="text-sm space-y-3">
-                    <div className="text-gray-300 font-mono bg-gray-800/50 p-2 rounded">
-                      {currentSection.content[debuggerState.currentLine - 1]}
-                    </div>
-                    {conceptsMap[debuggerState.currentLine] && (
-                      <p className="text-gray-400">
-                        {conceptsMap[debuggerState.currentLine]}
-                      </p>
-                    )}
-                  </div>
-                </div>
+            {/* Panel content */}
+            <div className="h-full">
+              <div className="bg-gray-800 px-4 py-2 font-medium text-sm">
+                Variables
+              </div>
+              <div className="overflow-auto h-[calc(100%-2.5rem)]">
+                <VariablesPanel variables={debuggerState.variables} />
               </div>
             </div>
           </div>
