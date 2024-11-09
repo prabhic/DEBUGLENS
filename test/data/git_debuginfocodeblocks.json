@@ -1,0 +1,158 @@
+{
+    "feature": {
+      "name": "Git Internal Operations",
+      "description": "Understanding Git's core operations and data structures",
+      "source": "git/git source code learning",
+      "categories": {
+        "Basics": {
+          "scenarios": ["Object Storage", "Simple Commits"],
+          "complexity": "Beginner"
+        },
+        "Advanced": {
+          "scenarios": ["Merging", "Rebasing", "Cherry-picking"],
+          "complexity": "Advanced"
+        },
+        "Internals": {
+          "scenarios": ["Hash Objects", "Pack Files", "Refs"],
+          "complexity": "Expert"
+        }
+      },
+      "flows": [
+        {
+          "name": "Object Storage",
+          "complexity": "Basic",
+          "time": "5 mins",
+          "prerequisites": "None"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Git Object Storage Internals",
+          "description": "How Git stores content in its object database",
+          "tag": "BasicScenario",
+          "steps": [
+            {
+              "name": "Initialize Repository Structure",
+              "entryPoint": "Initialize empty repository",
+              "sections": [
+                {
+                  "name": "Repository Setup",
+                  "codeBlocks": [
+                    {
+                      "name": "Initial Structure",
+                      "code": [
+                        "repo = {",
+                        "  'latest_commit': None,",
+                        "  'refs': {'HEAD': None, 'main': None},",
+                        "  'objects': {}",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "repo",
+                          "previous": null,
+                          "current": {
+                            "latest_commit": null,
+                            "refs": { "HEAD": null, "main": null },
+                            "objects": {}
+                          },
+                          "type": "dictionary",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Git Repository Structure",
+                        "points": [
+                          "Stores the latest commit reference.",
+                          "Manages object storage."
+                        ],
+                        "focus": "Understanding Git's internal data structure."
+                      }
+                    },
+                    {
+                      "name": "Collections Init",
+                      "code": [
+                        "commits = []",
+                        "blobs = []",
+                        "trees = []"
+                      ],
+                      "variables": [
+                        {
+                          "name": "commits",
+                          "current": [],
+                          "type": "array",
+                          "important": true
+                        },
+                        {
+                          "name": "blobs",
+                          "current": [],
+                          "type": "array",
+                          "important": true
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Create Blobs",
+              "entryPoint": "Create content blobs for storage",
+              "sections": [
+                {
+                  "name": "Content Storage",
+                  "codeBlocks": [
+                    {
+                      "name": "Define Changes",
+                      "code": [
+                        "changes = [",
+                        "  {'path': 'README.md', 'content': '# Project'},",
+                        "  {'path': 'main.py', 'content': 'print(hello)'}",
+                        "]"
+                      ]
+                    },
+                    {
+                      "name": "Blob Creation Loop",
+                      "code": [
+                        "for file in changes:",
+                        "  content_hash = calculate_hash(file['content'])",
+                        "  blob = { 'type': 'blob', 'content': file['content'], 'hash': content_hash }",
+                        "  blobs.append(blob)",
+                        "  repo['objects'][content_hash] = blob"
+                      ],
+                      "variables": [
+                        {
+                          "name": "content_hash",
+                          "previous": null,
+                          "current": "8c7e5a667f1b771847fe88c01c3de34413a1b08d",
+                          "type": "string",
+                          "important": true
+                        },
+                        {
+                          "name": "blob",
+                          "previous": null,
+                          "current": { "type": "blob", "content": "file content" },
+                          "type": "dictionary",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Blob Creation Process",
+                        "points": [
+                          "Content addressing using SHA-1",
+                          "Immutable storage",
+                          "Content deduplication"
+                        ],
+                        "focus": "How Git identifies unique content"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+  

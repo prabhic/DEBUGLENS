@@ -147,12 +147,25 @@ const ConceptsPanel: FC<ConceptsPanelProps> = ({ concepts }) => {
   );
 };
 
+interface BreakpointInfo {
+  stepIndex: number;
+  regionIndex: number;
+  breakpointIndex: number;
+  breakpoint: ScenarioData['steps'][0]['regions'][0]['breakpoints'][0];
+}
+
 export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>();
   const [selectedScenario, setSelectedScenario] = useState<string>();
   const [variables, setVariables] = useState<VariableState[]>([]);
   const [currentConcepts, setCurrentConcepts] = useState<ConceptsPanelProps['concepts'] | null>(null);
   const [rightPanelWidth, setRightPanelWidth] = useState<number>(300);
+  const [isDebugging, setIsDebugging] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [breakpoints, setBreakpoints] = useState<Set<string>>(new Set());
+  const [currentBreakpointIndex, setCurrentBreakpointIndex] = useState<number>(0);
+  const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointInfo | null>(null);
+  const [allBreakpoints, setAllBreakpoints] = useState<BreakpointInfo[]>([]);
 
   // Select first category by default
   React.useEffect(() => {
@@ -219,12 +232,26 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
     };
   };
 
-  const handleBreakpointClick = (breakpoint: ScenarioData['steps'][0]['regions'][0]['breakpoints'][0]) => {
+  const handleBreakpointClick = (
+    breakpoint: ScenarioData['steps'][0]['regions'][0]['breakpoints'][0],
+    stepIndex: number,
+    regionIndex: number,
+    breakpointIndex: number
+  ) => {
     if (breakpoint.variables) {
       setVariables(breakpoint.variables);
     }
     if (breakpoint.concepts) {
       setCurrentConcepts(breakpoint.concepts);
+    }
+    
+    if (isDebugging) {
+      setActiveBreakpoint({
+        stepIndex,
+        regionIndex,
+        breakpointIndex,
+        breakpoint
+      });
     }
   };
 
@@ -267,10 +294,37 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
                       className="pl-4"
                     >
                       <button
-                        onClick={() => handleBreakpointClick(breakpoint)}
-                        className="text-left w-full hover:bg-gray-800 p-2 rounded transition-colors"
+                        onClick={() => handleBreakpointClick(breakpoint, stepIndex, regionIndex, breakpointIndex)}
+                        className={`text-left w-full p-2 rounded transition-colors relative
+                          ${breakpoints.has(breakpoint.name) ? 'border-l-2 border-red-500' : ''}
+                          ${activeBreakpoint?.breakpoint.name === breakpoint.name 
+                            ? 'bg-blue-500/20 border-l-2 border-blue-500' 
+                            : 'hover:bg-gray-800'}`}
+                        disabled={isDebugging && activeBreakpoint?.breakpoint.name !== breakpoint.name}
                       >
-                        <div className="text-yellow-500 text-sm mb-1">{breakpoint.name}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-yellow-500 text-sm mb-1 flex items-center gap-2">
+                            {breakpoint.name}
+                            {activeBreakpoint?.breakpoint.name === breakpoint.name && (
+                              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                            )}
+                          </div>
+                          {!isDebugging && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleBreakpoint(breakpoint.name);
+                              }}
+                              className={`px-2 py-1 rounded text-xs ${
+                                breakpoints.has(breakpoint.name)
+                                  ? 'bg-red-500/20 text-red-300'
+                                  : 'bg-gray-700 text-gray-400'
+                              }`}
+                            >
+                              {breakpoints.has(breakpoint.name) ? 'Remove Breakpoint' : 'Set Breakpoint'}
+                            </button>
+                          )}
+                        </div>
                         <div className="font-mono text-sm text-gray-300 whitespace-pre">
                           {breakpoint.code.join('\n')}
                         </div>
@@ -296,8 +350,133 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
   const MIN_PANEL_WIDTH = 250;
   const MAX_PANEL_WIDTH = 800;
 
+  const handleStartDebugging = () => {
+    const scenario = getCurrentScenario();
+    if (!scenario) return;
+
+    // Collect all breakpoints in order
+    const bps: BreakpointInfo[] = [];
+    scenario.steps.forEach((step, stepIndex) => {
+      step.regions?.forEach((region, regionIndex) => {
+        region.breakpoints.forEach((bp, breakpointIndex) => {
+          // Only add if it's a set breakpoint
+          if (breakpoints.has(bp.name)) {
+            bps.push({
+              stepIndex,
+              regionIndex,
+              breakpointIndex,
+              breakpoint: bp
+            });
+          }
+        });
+      });
+    });
+
+    if (bps.length === 0) return; // Don't start debugging if no breakpoints
+
+    setAllBreakpoints(bps);
+    setIsDebugging(true);
+    setIsPaused(true);
+    setCurrentBreakpointIndex(0);
+
+    // Set first breakpoint as active
+    const first = bps[0];
+    handleBreakpointClick(
+      first.breakpoint,
+      first.stepIndex,
+      first.regionIndex,
+      first.breakpointIndex
+    );
+    setActiveBreakpoint(first);
+  };
+
+  const handleContinue = () => {
+    if (!isDebugging || !activeBreakpoint) return;
+
+    const currentIndex = currentBreakpointIndex;
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex >= allBreakpoints.length) {
+      // No more breakpoints, stop debugging
+      handleStopDebugging();
+      return;
+    }
+
+    // Move to next breakpoint
+    const next = allBreakpoints[nextIndex];
+    handleBreakpointClick(
+      next.breakpoint,
+      next.stepIndex,
+      next.regionIndex,
+      next.breakpointIndex
+    );
+    setActiveBreakpoint(next);
+    setCurrentBreakpointIndex(nextIndex);
+  };
+
+  const handleStepOver = () => {
+    if (!isDebugging || !activeBreakpoint) return;
+
+    const currentIndex = currentBreakpointIndex;
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex >= allBreakpoints.length) {
+      // No more breakpoints, stop debugging
+      handleStopDebugging();
+      return;
+    }
+
+    // Move to next breakpoint
+    const next = allBreakpoints[nextIndex];
+    handleBreakpointClick(
+      next.breakpoint,
+      next.stepIndex,
+      next.regionIndex,
+      next.breakpointIndex
+    );
+    setActiveBreakpoint(next);
+    setCurrentBreakpointIndex(nextIndex);
+    setIsPaused(true);
+  };
+
+  const handleStopDebugging = () => {
+    setIsDebugging(false);
+    setIsPaused(false);
+    setCurrentBreakpointIndex(0);
+    setActiveBreakpoint(null);
+    setVariables([]);
+    setCurrentConcepts(null);
+    setAllBreakpoints([]);
+  };
+
+  const handleClearBreakpoints = () => {
+    setBreakpoints(new Set());
+  };
+
+  const toggleBreakpoint = (breakpointName: string) => {
+    setBreakpoints(prev => {
+      const newBreakpoints = new Set(prev);
+      if (newBreakpoints.has(breakpointName)) {
+        newBreakpoints.delete(breakpointName);
+      } else {
+        newBreakpoints.add(breakpointName);
+      }
+      return newBreakpoints;
+    });
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-900">
+      <DebugToolbar
+        isDebugging={isDebugging}
+        isPaused={isPaused}
+        hasBreakpoints={breakpoints.size > 0}
+        onStartDebugging={handleStartDebugging}
+        onStopDebugging={handleStopDebugging}
+        onContinue={handleContinue}
+        onStepOver={handleStepOver}
+        onClearBreakpoints={handleClearBreakpoints}
+      />
       <div className="flex-1 flex min-h-0">
         {/* Left panel - Categories and Scenarios */}
         <div className="w-[250px] border-r border-gray-700 overflow-y-auto custom-scrollbar bg-gray-900">

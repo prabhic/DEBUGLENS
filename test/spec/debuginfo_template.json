@@ -1,0 +1,67 @@
+{
+    "feature": {
+      "name": "[Feature Name]",
+      "description": "[Feature Description]",
+      "source": "[Source Information]",
+      "categories": {
+        "[Category]": {
+          "scenarios": ["[Scenario1]", "[Scenario2]"],
+          "complexity": "[Complexity Level]"
+        }
+      },
+      "flows": [
+        {
+          "name": "[Flow Name]",
+          "complexity": "[Flow Complexity]",
+          "time": "[Estimated Time]",
+          "prerequisites": "[Prerequisites]"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "[Scenario Name]",
+          "description": "[Scenario Description]",
+          "tag": "[Scenario Tag]",
+          "steps": [
+            {
+              "name": "[Step Name]",
+              "entryPoint": "[Entry Point]",
+              "regions": [
+                {
+                  "name": "[Region Name]",
+                  "breakpoints": [
+                    {
+                      "name": "[Breakpoint Name]",
+                      "code": [
+                        "[Code Line 1]",
+                        "[Code Line 2]"
+                      ],
+                      "variables": [
+                        {
+                          "name": "[Variable Name]",
+                          "previous": "[Previous Value]",
+                          "current": "[Current Value]",
+                          "type": "[Data Type]",
+                          "changed": true,
+                          "important": "[Importance Description]"
+                        }
+                      ],
+                      "concepts": {
+                        "title": "[Concept Title]",
+                        "points": [
+                          "[Point1]",
+                          "[Point2]"
+                        ],
+                        "focus": "[Concept Focus]"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+  
