@@ -120,9 +120,10 @@ const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
 interface PseudoCodeViewerProps {
   initialContent: string;
   onReset: () => void;
+  onOpenAIChat: () => void;
 }
 
-export const PseudoCodeViewer: FC<PseudoCodeViewerProps> = ({ initialContent, onReset }) => {
+export const PseudoCodeViewer: FC<PseudoCodeViewerProps> = ({ initialContent, onReset, onOpenAIChat }) => {
   console.log('PseudoCodeViewer rendered at:', new Date().toISOString());
   
   const [pseudoContent, setPseudoContent] = useState<PseudoContent | null>(null)

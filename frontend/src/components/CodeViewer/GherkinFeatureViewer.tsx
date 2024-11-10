@@ -65,6 +65,7 @@ const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
 interface GherkinFeatureViewerProps {
   initialContent: string;
   onReset: () => void;
+  onOpenAIChat: () => void;
 }
 
 // Add new interfaces at the top
@@ -75,7 +76,11 @@ interface ScenarioInfo {
   lineEnd: number;
 }
 
-export const GherkinFeatureViewer: FC<GherkinFeatureViewerProps> = ({ initialContent, onReset }) => {
+export const GherkinFeatureViewer: React.FC<GherkinFeatureViewerProps> = ({
+  initialContent,
+  onReset,
+  onOpenAIChat
+}) => {
   const [featureContent, setFeatureContent] = useState<FeatureContent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -255,7 +260,7 @@ export const GherkinFeatureViewer: FC<GherkinFeatureViewerProps> = ({ initialCon
       featureContent.scenarios.forEach((scenario, scenarioIndex) => {
         scenario.steps.forEach((step, stepIndex) => {
           allLines.push({
-            content: step,
+            content: typeof step === 'string' ? step : step.text || '',
             lineNumber: calculateLineNumber(scenarioIndex, stepIndex)
           });
         });
@@ -327,7 +332,7 @@ export const GherkinFeatureViewer: FC<GherkinFeatureViewerProps> = ({ initialCon
       featureContent.scenarios.forEach((scenario, scenarioIndex) => {
         scenario.steps.forEach((step, stepIndex) => {
           allLines.push({
-            content: step,
+            content: typeof step === 'string' ? step : step.text || '',
             lineNumber: calculateLineNumber(scenarioIndex, stepIndex)
           });
         });
@@ -445,6 +450,27 @@ export const GherkinFeatureViewer: FC<GherkinFeatureViewerProps> = ({ initialCon
     );
   };
 
+  const clearAllBreakpoints = async () => {
+    setDebuggerState((prev: DebuggerState) => ({
+      ...prev,
+      breakpoints: new Set()
+    }));
+
+    if (process.env.NEXT_PUBLIC_API_ENABLED === 'true') {
+      try {
+        const breakpointsToRemove = Array.from(debuggerState.breakpoints);
+        
+        for (const lineNumber of breakpointsToRemove) {
+          await setBreakpoint('feature-file', Number(lineNumber), 'default');
+        }
+        
+        console.log('All breakpoints cleared');
+      } catch (error) {
+        console.error('Error clearing breakpoints:', error);
+      }
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-900">
       <div className="flex-1 overflow-hidden">
@@ -463,10 +489,8 @@ export const GherkinFeatureViewer: FC<GherkinFeatureViewerProps> = ({ initialCon
     </div>
   );
 };
-
 // Helper functions
 const calculateLineNumber = (scenarioIndex: number, stepIndex: number): number => {
-  // Add logic to calculate actual line numbers based on scenario and step index
   return (scenarioIndex * 100) + stepIndex + 1;
 };
 
@@ -481,34 +505,34 @@ const updateVariablesForCodeBlock = (
   scenario: ScenarioSection,
   stepIndex: number
 ): VariableState[] => {
-  // Example logic - you can customize based on your needs
   const step = scenario.steps[stepIndex];
+  const stepText = typeof step === 'string' ? step : step.text || '';
   
-  if (step.includes('# @Region:')) {
-    const regionName = step.match(/# @Region: (.*)/)?.[1];
+  if (stepText.includes('# @Region:')) {
+    const regionName = stepText.match(/# @Region: (.*)/)?.[1];
     return [
       ...currentVariables,
       {
         name: 'current_region',
-        value: regionName,
+        value: regionName || '',
         type: 'string',
         previous: currentVariables.find(v => v.name === 'current_region')?.value,
-        current: regionName,
+        current: regionName || '',
         changed: true
       }
     ];
   }
 
-  if (step.includes('# @Break:')) {
-    const breakpointName = step.match(/# @Break: (.*)/)?.[1];
+  if (stepText.includes('# @Break:')) {
+    const breakpointName = stepText.match(/# @Break: (.*)/)?.[1];
     return [
       ...currentVariables,
       {
         name: 'break_point',
-        value: breakpointName,
+        value: breakpointName || '',
         type: 'string',
         previous: currentVariables.find(v => v.name === 'break_point')?.value,
-        current: breakpointName,
+        current: breakpointName || '',
         changed: true
       }
     ];
@@ -523,11 +547,10 @@ const updateVariablesForBreakpoint = (
   scenario: ScenarioSection,
   stepIndex: number
 ): VariableState[] => {
-  // Example logic - customize based on your feature file structure
   const step = scenario.steps[stepIndex];
+  const stepText = typeof step === 'string' ? step : step.text || '';
   
-  // Check for variable declarations in the step
-  const variableMatch = step.match(/(\w+)\s*=\s*{([^}]*)}/);
+  const variableMatch = stepText.match(/(\w+)\s*=\s*{([^}]*)}/);
   if (variableMatch) {
     const [_, varName, varValue] = variableMatch;
     return [
@@ -591,36 +614,12 @@ const getScenarioLines = (content: string, scenario: ScenarioInfo) => {
   return scenarioLines;
 };
 
-// Add this function inside the GherkinFeatureViewer component
-const clearAllBreakpoints = async () => {
-  // First update local state
-  setDebuggerState(prev => ({
-    ...prev,
-    breakpoints: new Set()
-  }));
-
-  // Then notify the debug service if API is enabled
-  if (process.env.NEXT_PUBLIC_API_ENABLED === 'true') {
-    try {
-      // Get all current breakpoints before clearing
-      const breakpointsToRemove = Array.from(debuggerState.breakpoints);
-      
-      // Remove each breakpoint via the API
-      for (const lineNumber of breakpointsToRemove) {
-        await setBreakpoint('feature-file', lineNumber, 'default');
-      }
-      
-      console.log('All breakpoints cleared');
-    } catch (error) {
-      console.error('Error clearing breakpoints:', error);
-    }
-  }
-};
-
+// Update getExecutableLines with proper type checking
 const getExecutableLines = (scenario: ScenarioSection): ScenarioStep[] => {
-  return scenario.steps.filter(step => 
-    step.type === 'step' || step.type === 'code_block'
-  );
+  return scenario.steps.filter(step => {
+    if (typeof step === 'string') return false;
+    return step.type === 'step' || step.type === 'code_block';
+  });
 };
 
 const getConceptsForLine = (scenario: ScenarioSection, lineNumber: number): string => {

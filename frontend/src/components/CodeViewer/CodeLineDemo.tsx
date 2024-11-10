@@ -1,7 +1,14 @@
 import React from 'react';
 
+interface CodeLineProps {
+  number: number;
+  content: string;
+  hasBreakpoint?: boolean;
+  onToggleBreakpoint?: (lineNumber: number) => void;
+}
+
 // CodeLine component
-const CodeLine = ({ 
+const CodeLine: React.FC<CodeLineProps> = ({ 
   number, 
   content, 
   hasBreakpoint = false, 
@@ -40,9 +47,9 @@ const CodeLine = ({
 
 // Demo component to show the CodeLine in action
 export const CodeLineDemo = () => {
-  const [breakpoints, setBreakpoints] = React.useState(new Set());
+  const [breakpoints, setBreakpoints] = React.useState<Set<number>>(new Set());
 
-  const toggleBreakpoint = (lineNumber) => {
+  const toggleBreakpoint = (lineNumber: number) => {
     setBreakpoints(prev => {
       const newBreakpoints = new Set(prev);
       if (newBreakpoints.has(lineNumber)) {

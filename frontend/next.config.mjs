@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   webpack: (config, { isServer, dev }) => {
     console.log("=== Configuring Webpack Watch ===");
 
@@ -16,14 +17,16 @@ const nextConfig = {
 
     return config;
   },
-  // Your existing rewrites
+  // Update rewrites for production
   async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://localhost:5000/api/:path*",
-      },
-    ];
+    return process.env.NODE_ENV === "development"
+      ? [
+          {
+            source: "/api/:path*",
+            destination: "http://localhost:5000/api/:path*",
+          },
+        ]
+      : [];
   },
 };
 

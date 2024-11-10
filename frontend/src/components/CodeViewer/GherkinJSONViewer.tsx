@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, FC, useEffect } from 'react'
-import { GitFeatureContent, VariableState } from '@/types/gherkin'
+import { VariableState } from '@/types/gherkin'
 import { ResizablePanel } from '@/components/CodeViewer/ResizablePanel'
 import { CodeLine } from './CodeLine'
 import { DebugToolbar } from './DebugToolbar'
@@ -9,7 +9,14 @@ import { MessageSquare } from 'lucide-react';
 import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
 
 interface GherkinJSONViewerProps {
-  content: GitFeatureContent;
+  content: {
+    scenarios: Array<{
+      name: string;
+      description?: string;
+      tag?: string;
+      steps: Array<StepData>;
+    }>;
+  };
   onReset: () => void;
   onOpenAIChat?: () => void;
 }
@@ -30,7 +37,7 @@ interface Section {
   codeBlocks: CodeBlock[];
 }
 
-interface ScenarioStep {
+interface StepData {
   name: string;
   entryPoint?: string;
   sections: Section[];
@@ -40,7 +47,14 @@ interface ScenarioData {
   name: string;
   description: string;
   tag: string;
-  steps: ScenarioStep[];
+  steps: StepData[];
+}
+
+interface CodeBlockInfo {
+  stepIndex: number;
+  sectionIndex: number;
+  codeBlockIndex: number;
+  codeBlock: CodeBlock;
 }
 
 interface VariablesPanelProps {
@@ -174,7 +188,7 @@ interface CodeBlockInfo {
   stepIndex: number;
   sectionIndex: number;
   codeBlockIndex: number;
-  codeBlock: ScenarioData['steps'][0]['sections'][0]['codeBlocks'][0];
+  codeBlock: CodeBlock;
 }
 
 export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset, onOpenAIChat }) => {
@@ -211,7 +225,7 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
   };
 
   const handleCodeBlockClick = (
-    codeBlock: ScenarioData['steps'][0]['sections'][0]['codeBlocks'][0],
+    codeBlock: CodeBlock,
     stepIndex: number,
     sectionIndex: number,
     codeBlockIndex: number

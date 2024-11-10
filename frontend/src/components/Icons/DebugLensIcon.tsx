@@ -1,4 +1,7 @@
-import { cn } from '@/lib/utils';
+// Simple className concatenation helper
+const combineClasses = (...classes: (string | undefined)[]) => {
+  return classes.filter(Boolean).join(' ');
+};
 
 interface DebugLensIconProps {
   className?: string;
@@ -12,7 +15,7 @@ export const DebugLensIcon = ({
   accentClassName = "stroke-violet-400" 
 }: DebugLensIconProps) => (
   <svg 
-    className={cn("w-6 h-6", className)}
+    className={combineClasses("w-6 h-6", className)}
     viewBox="0 0 24 24" 
     fill="none" 
     xmlns="http://www.w3.org/2000/svg"

@@ -160,10 +160,16 @@ const DebugLoadingAnimation = () => (
   </div>
 );
 
+// Add type for the API response
+interface DebugInfoResponse {
+  feature?: GitFeatureContent;
+  error?: string;
+}
+
 export default function Home() {
   const [fileType, setFileType] = useState<'pseudo' | 'gherkin' | 'debug-info-json' | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
-  const [parsedGitContent, setParsedGitContent] = useState<GitFeatureContent | null>(null);
+  const [debugInfoJsonParsed, setDebugInfoJsonParsed] = useState<GitFeatureContent | null>(null);
   const [inputValue, setInputValue] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
@@ -204,16 +210,16 @@ export default function Home() {
       if (extension === 'pseudo') {
         setFileContent(content);
         setFileType('pseudo');
-        setParsedGitContent(null);
+        setDebugInfoJsonParsed(null);
       } else if (extension === 'feature' || extension === 'gherkin') {
         setFileContent(content);
         setFileType('gherkin');
-        setParsedGitContent(null);
+        setDebugInfoJsonParsed(null);
       } else if (extension === 'json') {
         try {
           const parsedContent = JSON.parse(content);
           if (parsedContent.feature && parsedContent.feature.categories) {
-            setParsedGitContent(parsedContent.feature);
+            setDebugInfoJsonParsed(parsedContent.feature);
             setFileType('debug-info-json');
             setFileContent(null);
           } else {
@@ -238,7 +244,7 @@ export default function Home() {
   const resetState = () => {
     setFileType(null);
     setFileContent(null);
-    setParsedGitContent(null);
+    setDebugInfoJsonParsed(null);
     setError(null);
     // Reset the file input
     if (fileInputRef.current) {
@@ -265,9 +271,9 @@ export default function Home() {
           />
         );
       case 'debug-info-json':
-        return parsedGitContent && (
+        return debugInfoJsonParsed && (
           <GherkinJSONViewer 
-            content={parsedGitContent}
+            content={debugInfoJsonParsed}
             onReset={resetState}
             onOpenAIChat={() => setIsAIChatOpen(true)}
           />
@@ -299,12 +305,16 @@ export default function Home() {
       setIsLoading(true);
       setError(null);
 
-      const response = await generateDebugInfoJson(prompt);
+      const response = await generateDebugInfoJson(prompt) as DebugInfoResponse;
       if ('error' in response) {
-        throw new Error(response.error);
+        throw new Error(response.error as string);
       }
       
-      setParsedGitContent(response.feature);
+      if (!response.feature) {
+        throw new Error('No feature content received');
+      }
+      
+      setDebugInfoJsonParsed(response.feature as GitFeatureContent);
       setFileType('debug-info-json');
       setFileContent(null);
 

@@ -1,11 +1,8 @@
-export interface ScenarioStep {
-  name?: string;
-  entryPoint?: string;
-  regions?: StepRegion[];
-  content?: string;
-  lineNumber?: number;
-  type: 'step' | 'code_block' | 'concept' | 'variable' | 'metadata';
-}
+export type ScenarioStep = string | {
+  text: string;
+  type?: 'step' | 'code_block';
+  // other properties as needed
+};
 
 export interface ScenarioSection {
   name: string;
@@ -65,10 +62,35 @@ export interface Flow {
   prerequisites: string;
 }
 
-export interface GitFeatureContent extends FeatureContent {
-  source?: string;
-  categories?: Record<string, Category>;
-  flows?: Flow[];
+export interface GitFeatureContent {
+  scenarios: {
+    name: string;
+    description?: string;
+    tag?: string;
+    steps: StepData[];
+  }[];
+}
+
+export interface StepData {
+  name: string;
+  entryPoint?: string;
+  sections: Section[];
+}
+
+export interface Section {
+  name: string;
+  codeBlocks: CodeBlock[];
+}
+
+export interface CodeBlock {
+  name: string;
+  code: string[];
+  variables?: VariableState[];
+  conceptDetails?: {
+    title: string;
+    points: string[];
+    focus: string;
+  };
 }
 
 export interface StepRegion {
