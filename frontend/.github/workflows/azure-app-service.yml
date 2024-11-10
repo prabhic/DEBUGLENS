@@ -1,0 +1,46 @@
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build Next.js app
+        run: |
+          cd frontend
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_CLAUDE_API_KEY: ${{ secrets.NEXT_PUBLIC_CLAUDE_API_KEY }}
+          NEXT_PUBLIC_CLAUDE_API_ENDPOINT: ${{ secrets.NEXT_PUBLIC_CLAUDE_API_ENDPOINT }}
+          NEXT_PUBLIC_CLAUDE_MODEL: ${{ secrets.NEXT_PUBLIC_CLAUDE_MODEL }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: "your-app-name"
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./frontend

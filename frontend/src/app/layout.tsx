@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { AIChatDialog } from '@/components/Chat/AIChatDialog'
+import { useState } from 'react'
 
 export const metadata: Metadata = {
   title: 'DebugLens',
@@ -11,6 +13,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Note: Since this is a server component, we'll need to move the AI chat state management
+  // to a client component wrapper or use a more sophisticated state management solution
   return (
     <html lang="en">
       <body>

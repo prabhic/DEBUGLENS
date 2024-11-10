@@ -1,0 +1,83 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import fs from 'fs/promises'
+import path from 'path'
+
+async function logToFile(data: any, prefix: string = 'api') {
+  try {
+    const tempDir = path.join(process.cwd(), 'temp');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${prefix}-${timestamp}.json`;
+
+    // Create temp directory if it doesn't exist
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    // Write the data to a file
+    await fs.writeFile(
+      path.join(tempDir, filename),
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        ...data
+      }, null, 2)
+    );
+
+    console.log(`Response saved to: temp/${filename}`);
+  } catch (error) {
+    console.error('Error writing to log file:', error);
+  }
+}
+
+export function middleware(request: NextRequest) {
+  // Only log API requests
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    console.log('\n=== API Request ===');
+    console.log('Path:', request.nextUrl.pathname);
+    console.log('Method:', request.method);
+
+    // Clone the request for logging
+    const clonedRequest = request.clone();
+
+    // For POST requests, log both request and response
+    if (request.method === 'POST') {
+      clonedRequest.json().then(async body => {
+        const requestData = {
+          type: 'request',
+          path: request.nextUrl.pathname,
+          method: request.method,
+          body: body
+        };
+
+        console.log('Request:', JSON.stringify(requestData, null, 2));
+        await logToFile(requestData, 'request');
+
+        // Modify response to capture and log it
+        const response = NextResponse.next();
+        const originalJson = response.json;
+
+        response.json = async function() {
+          const responseBody = await originalJson.call(this);
+          
+          const responseData = {
+            type: 'response',
+            path: request.nextUrl.pathname,
+            method: request.method,
+            body: responseBody
+          };
+
+          console.log('Response:', JSON.stringify(responseData, null, 2));
+          await logToFile(responseData, 'response');
+
+          return responseBody;
+        };
+
+        return response;
+      });
+    }
+  }
+  
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: '/api/:path*',
+} 

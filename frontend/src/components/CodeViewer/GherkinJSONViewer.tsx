@@ -1,32 +1,39 @@
 'use client'
 
 import React, { useState, FC, useEffect } from 'react'
-import { GitFeatureContent, Category, VariableState } from '@/types/gherkin'
+import { GitFeatureContent, VariableState } from '@/types/gherkin'
 import { ResizablePanel } from '@/components/CodeViewer/ResizablePanel'
 import { CodeLine } from './CodeLine'
 import { DebugToolbar } from './DebugToolbar'
+import { MessageSquare } from 'lucide-react';
+import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
 
 interface GherkinJSONViewerProps {
   content: GitFeatureContent;
   onReset: () => void;
+  onOpenAIChat?: () => void;
+}
+
+interface CodeBlock {
+  name: string;
+  code: string[];
+  variables?: VariableState[];
+  conceptDetails?: {
+    title: string;
+    points: string[];
+    focus: string;
+  };
+}
+
+interface Section {
+  name: string;
+  codeBlocks: CodeBlock[];
 }
 
 interface ScenarioStep {
   name: string;
   entryPoint?: string;
-  sections: {
-    name: string;
-    codeBlocks: {
-      name: string;
-      code: string[];
-      variables?: VariableState[];
-      conceptDetails?: {
-        title: string;
-        points: string[];
-        focus: string;
-      };
-    }[];
-  }[];
+  sections: Section[];
 }
 
 interface ScenarioData {
@@ -98,7 +105,7 @@ const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
                 {variable.previous !== undefined && (
                   <div className="mb-2">
                     <div className="text-xs text-gray-400 mb-1">Previous:</div>
-                    <pre className="font-mono text-sm text-gray-400 bg-gray-800/50 p-2 rounded overflow-auto">
+                    <pre className="font-mono text-sm text-gray-400 bg-gray-800/50 p-2 rounded overflow-auto custom-scrollbar">
                       {formatValue(variable.previous)}
                     </pre>
                   </div>
@@ -106,7 +113,7 @@ const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
 
                 <div>
                   <div className="text-xs text-gray-400 mb-1">Current:</div>
-                  <pre className="font-mono text-sm text-green-300 bg-gray-800/50 p-2 rounded overflow-auto">
+                  <pre className="font-mono text-sm text-green-300 bg-gray-800/50 p-2 rounded overflow-auto custom-scrollbar">
                     {formatValue(variable.current)}
                   </pre>
                 </div>
@@ -123,38 +130,6 @@ const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
               </div>
             ))}
           </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-interface CategoryListProps {
-  categories: Record<string, {
-    scenarios: string[];
-    complexity: string;
-  }>;
-  onSelectCategory: (category: string) => void;
-  selectedCategory?: string;
-}
-
-const CategoryList: FC<CategoryListProps> = ({ categories, onSelectCategory, selectedCategory }) => {
-  return (
-    <div className="mb-4">
-      <h3 className="text-sm font-semibold text-gray-300 mb-2 px-4">Categories</h3>
-      <div className="space-y-1">
-        {Object.entries(categories).map(([name, category]) => (
-          <button
-            key={name}
-            className={`w-full text-left px-4 py-2 hover:bg-gray-700/50 transition-colors
-              ${selectedCategory === name ? 'bg-gray-700/70 text-blue-400' : 'text-gray-300'}`}
-            onClick={() => onSelectCategory(name)}
-          >
-            <div className="text-sm">{name}</div>
-            <div className="text-xs text-gray-500">
-              {category.complexity} · {category.scenarios.length} scenarios
-            </div>
-          </button>
         ))}
       </div>
     </div>
@@ -202,8 +177,7 @@ interface CodeBlockInfo {
   codeBlock: ScenarioData['steps'][0]['sections'][0]['codeBlocks'][0];
 }
 
-export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>();
+export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset, onOpenAIChat }) => {
   const [selectedScenario, setSelectedScenario] = useState<string>();
   const [variables, setVariables] = useState<VariableState[]>([]);
   const [currentConcepts, setCurrentConcepts] = useState<ConceptsPanelProps['concepts'] | null>(null);
@@ -215,76 +189,24 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
   const [activeCodeBlock, setActiveCodeBlock] = useState<CodeBlockInfo | null>(null);
   const [allCodeBlocks, setAllCodeBlocks] = useState<CodeBlockInfo[]>([]);
 
-  // Select first category by default
+  // Select first scenario by default
   React.useEffect(() => {
-    if (content.categories) {
-      const firstCategory = Object.keys(content.categories)[0];
-      setSelectedCategory(firstCategory);
-      
-      // Select first scenario in the category
-      if (firstCategory && content.categories[firstCategory].scenarios.length > 0) {
-        setSelectedScenario(content.categories[firstCategory].scenarios[0]);
-      }
+    if (content.scenarios && content.scenarios.length > 0) {
+      setSelectedScenario(content.scenarios[0].name);
     }
   }, [content]);
 
   const getCurrentScenario = (): ScenarioData | null => {
     if (!selectedScenario) return null;
     
-    // Find scenario by doing a case-insensitive match with normalization
-    const scenario = content.scenarios.find(s => {
-      const normalizeString = (str: string) => 
-        str.toLowerCase()
-           .replace(/\s+/g, ' ')
-           .trim()
-           .replace(/[-_]/g, ' ')
-           .replace(/ing\b/g, ''); // Remove 'ing' at word boundaries
-      
-      const scenarioName = normalizeString(s.name);
-      const selected = normalizeString(selectedScenario);
-      
-      console.log('Matching:', selected, 'with:', scenarioName); // Debug log
-      
-      // Get base words (removing common prefixes like 'git')
-      const getBaseWords = (str: string) => 
-        str.split(' ')
-           .filter(word => !['git', 'the', 'a', 'an'].includes(word));
-      
-      const scenarioWords = getBaseWords(scenarioName);
-      const selectedWords = getBaseWords(selected);
-      
-      // Check if the key word from selected scenario exists in the full scenario name
-      return selectedWords.some(word => 
-        scenarioWords.some(scenarioWord => 
-          scenarioWord === word || 
-          scenarioWord.startsWith(word) || 
-          word.startsWith(scenarioWord)
-        )
-      );
-    });
-    
-    console.log('Selected:', selectedScenario);
-    console.log('Found:', scenario?.name);
-    
+    const scenario = content.scenarios.find(s => s.name === selectedScenario);
     if (!scenario) return null;
 
     return {
       name: scenario.name,
       description: scenario.description || '',
       tag: scenario.tag || 'Default',
-      steps: scenario.steps.map(step => ({
-        name: step.name || '',
-        entryPoint: step.entryPoint,
-        sections: step.sections.map(section => ({
-          name: section.name,
-          codeBlocks: section.codeBlocks.map(block => ({
-            name: block.name,
-            code: block.code,
-            variables: block.variables,
-            conceptDetails: block.conceptDetails
-          }))
-        }))
-      }))
+      steps: scenario.steps
     };
   };
 
@@ -638,15 +560,12 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
         <div className="flex items-center h-12">
           {/* Brand section - match sidebar width */}
           <div className="w-64 flex items-center px-4">
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 4V4C8 4 4 8 4 12V12C4 16 8 20 12 20V20C16 20 20 16 20 12V12C20 8 16 4 12 4Z" stroke="currentColor" strokeWidth="2"/>
-              <path d="M15 12L12 12M12 12L9 12M12 12L12 9M12 12L12 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+            <DebugLensIcon className="w-5 h-5" />
             <span className="text-white font-medium ml-3">DebugLens</span>
           </div>
 
           {/* Toolbar buttons - aligned with main content */}
-          <div className="px-4">
+          <div className="flex-1 px-4 flex items-center justify-between">
             <DebugToolbar
               isDebugging={isDebugging}
               isPaused={isPaused}
@@ -657,39 +576,44 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
               onStepOver={handleStepOver}
               onClearBreakpoints={handleClearBreakpoints}
             />
+            
+            {/* AI Chat button */}
+            {onOpenAIChat && (
+              <button
+                onClick={onOpenAIChat}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+              >
+                <MessageSquare size={16} />
+                <span>AI Chat</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main content area - fills remaining space with internal scrolling */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Left sidebar - fixed width with internal scroll */}
-        <div className="w-64 flex-none border-r border-gray-700 overflow-y-auto bg-gray-900">
+        {/* Left sidebar - simplified to show only scenarios */}
+        <div className="w-64 flex-none border-r border-gray-700 overflow-y-auto custom-scrollbar bg-gray-900">
           <div className="p-4">
-            {content.categories && (
-              <CategoryList
-                categories={content.categories}
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-              />
-            )}
-            {selectedCategory && content.categories && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-300 mb-2">Scenarios</h3>
-                <div className="space-y-1">
-                  {content.categories[selectedCategory].scenarios.map((scenario) => (
-                    <button
-                      key={scenario}
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-700/50 transition-colors rounded
-                        ${selectedScenario === scenario ? 'bg-gray-700/70 text-blue-400' : 'text-gray-300'}`}
-                      onClick={() => handleScenarioSelect(scenario)}
-                    >
-                      {scenario}
-                    </button>
-                  ))}
-                </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-300 mb-2">Scenarios</h3>
+              <div className="space-y-1">
+                {content.scenarios.map((scenario) => (
+                  <button
+                    key={scenario.name}
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-700/50 transition-colors rounded
+                      ${selectedScenario === scenario.name ? 'bg-gray-700/70 text-blue-400' : 'text-gray-300'}`}
+                    onClick={() => setSelectedScenario(scenario.name)}
+                  >
+                    <div className="text-sm">{scenario.name}</div>
+                    {scenario.description && (
+                      <div className="text-xs text-gray-500 mt-1">{scenario.description}</div>
+                    )}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -697,7 +621,7 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Code panel - with internal scroll */}
           <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
               <div className="p-4">
                 {renderScenarioContent()}
               </div>

@@ -1,16 +1,194 @@
 'use client'
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { PseudoCodeViewer } from '@/components/CodeViewer/PseudoCodeViewer';
 import { GherkinFeatureViewer } from '@/components/CodeViewer/GherkinFeatureViewer';
 import { GherkinJSONViewer } from '@/components/CodeViewer/GherkinJSONViewer';
 import { GitFeatureContent } from '@/types/gherkin';
+import { AIChatDialog } from '@/components/Chat/AIChatDialog';
+import { 
+  Code2, 
+  GitBranch, 
+  Box, 
+  Upload,
+  MessageSquare,
+  ChevronRight
+} from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faLinux, 
+  faGitAlt, 
+  faReact,  // for TensorFlow (using React as placeholder)
+  faJs,      // for Qt (using JS as placeholder)
+  faDocker,
+  faNodeJs
+} from '@fortawesome/free-brands-svg-icons';
+import { 
+  faDatabase,
+  faCloud
+} from '@fortawesome/free-solid-svg-icons';
+import { generateGherkinFile, generateDebugInfoJson } from '@/services/fileGenerationService';
+import { isFeatureEnabled } from '@/config/features';
+import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
+
+// Quick start options
+const QUICK_START_OPTIONS = [
+  {
+    title: "Explore Linux Kernel",
+    description: "Dive into core kernel concepts and structures",
+    icon: Code2,
+    action: "linux"
+  },
+  {
+    title: "Analyze Git Internals",
+    description: "Understand Git's internal mechanisms",
+    icon: GitBranch,
+    action: "git"
+  },
+  {
+    title: "Load Custom Codebase",
+    description: "Debug and explore your own code",
+    icon: Upload,
+    action: "custom"
+  },
+  {
+    title: "Browse Templates",
+    description: "Start with predefined code structures",
+    icon: Box,
+    action: "templates"
+  }
+];
+
+// Famous codebases
+const FAMOUS_CODEBASES = [
+  { name: "Linux", icon: "/icons/linux.svg" },
+  { name: "Git", icon: "/icons/git.svg" },
+  { name: "Qt", icon: "/icons/qt.svg" },
+  { name: "TensorFlow", icon: "/icons/tensorflow.svg" },
+  // Add more as needed
+];
+
+// Define suggestion options with their icons
+const EXPLORE_SUGGESTIONS = [
+  {
+    name: "Linux Memory Allocation",
+    description: "What happens internally when an application requests memory from Linux?",
+    icon: faLinux
+  },
+  {
+    name: "Git Commit Process",
+    description: "What happens behind the scenes when you run 'git commit'?",
+    icon: faGitAlt
+  },
+  {
+    name: "Docker Container Creation",
+    description: "What happens internally when you run 'docker run'?",
+    icon: faDocker
+  },
+  {
+    name: "Kubernetes Pod Deployment",
+    description: "What happens internally when you deploy a new pod to Kubernetes?",
+    icon: faCloud
+  },
+  {
+    name: "Redis Data Storage",
+    description: "What happens internally when Redis stores and retrieves data?",
+    icon: faDatabase
+  },
+  {
+    name: "Node.js Request Handling",
+    description: "What happens internally when Node.js receives an HTTP request?",
+    icon: faNodeJs
+  },
+  {
+    name: "React State Update",
+    description: "What happens internally when you call setState in React?",
+    icon: faReact
+  },
+  {
+    name: "PostgreSQL Query Execution",
+    description: "What happens internally when PostgreSQL executes your SQL query?",
+    icon: faDatabase
+  }
+];
+
+// Add new loading component
+const DebugLoadingAnimation = () => (
+  <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-700">
+      <div className="space-y-6">
+        {/* Animation container */}
+        <div className="flex justify-center">
+          <div className="relative w-16 h-16">
+            {/* Circular progress */}
+            <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-transparent border-t-blue-500 rounded-full animate-spin"></div>
+            {/* Debug icon */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none">
+                <path d="M12 4V4C8 4 4 8 4 12V12C4 16 8 20 12 20V20C16 20 20 16 20 12V12C20 8 16 4 12 4Z" 
+                      stroke="currentColor" strokeWidth="2"/>
+                <path d="M15 12L12 12M12 12L9 12M12 12L12 9M12 12L12 15" 
+                      stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        {/* Loading text */}
+        <div className="text-center space-y-3">
+          <h3 className="text-lg font-semibold text-white">Generating Debug Information</h3>
+          <p className="text-sm text-gray-400">
+            Our AI is analyzing your scenario and creating detailed debugging steps...
+          </p>
+        </div>
+
+        {/* Animated progress steps */}
+        <div className="space-y-2">
+          {['Analyzing context', 'Building debug flow', 'Preparing variables'].map((step, index) => (
+            <div key={step} 
+                 className={`flex items-center space-x-3 text-sm
+                   ${index === 0 ? 'text-blue-400' : 'text-gray-500'}`}>
+              <div className={`w-2 h-2 rounded-full
+                ${index === 0 ? 'bg-blue-400 animate-pulse' : 'bg-gray-600'}`}></div>
+              <span>{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 export default function Home() {
   const [fileType, setFileType] = useState<'pseudo' | 'gherkin' | 'debug-info-json' | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [parsedGitContent, setParsedGitContent] = useState<GitFeatureContent | null>(null);
+  const [inputValue, setInputValue] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Add keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Check for Ctrl+L (Chat)
+      if (event.ctrlKey && event.key.toLowerCase() === 'l') {
+        event.preventDefault();
+        setIsAIChatOpen(prev => !prev);
+      }
+      
+      // Check for Ctrl+O (Open file)
+      if (event.ctrlKey && event.key.toLowerCase() === 'o') {
+        event.preventDefault();
+        fileInputRef.current?.click();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -32,7 +210,6 @@ export default function Home() {
         setFileType('gherkin');
         setParsedGitContent(null);
       } else if (extension === 'json') {
-        // Validate if it's a debug info JSON
         try {
           const parsedContent = JSON.parse(content);
           if (parsedContent.feature && parsedContent.feature.categories) {
@@ -62,6 +239,7 @@ export default function Home() {
     setFileType(null);
     setFileContent(null);
     setParsedGitContent(null);
+    setError(null);
     // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -75,6 +253,7 @@ export default function Home() {
           <PseudoCodeViewer 
             initialContent={fileContent} 
             onReset={resetState}
+            onOpenAIChat={() => setIsAIChatOpen(true)}
           />
         );
       case 'gherkin':
@@ -82,6 +261,7 @@ export default function Home() {
           <GherkinFeatureViewer 
             initialContent={fileContent} 
             onReset={resetState}
+            onOpenAIChat={() => setIsAIChatOpen(true)}
           />
         );
       case 'debug-info-json':
@@ -89,6 +269,7 @@ export default function Home() {
           <GherkinJSONViewer 
             content={parsedGitContent}
             onReset={resetState}
+            onOpenAIChat={() => setIsAIChatOpen(true)}
           />
         );
       default:
@@ -96,64 +277,227 @@ export default function Home() {
     }
   };
 
-  return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-900">
-      {!fileType ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="max-w-2xl w-full p-8">
-            <div className="text-center space-y-6">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-white">DebugLens</h1>
-                <p className="text-lg text-gray-400">
-                  Interactive Code Learning & Debugging Assistant
-                </p>
-              </div>
+  const handleGherkinGenerate = async (prompt: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-              <div className="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h2 className="text-xl font-semibold text-white">Get Started</h2>
-                    <p className="text-gray-400">Choose how you want to explore code:</p>
-                  </div>
+      const gherkinContent = await generateGherkinFile(prompt);
+      setFileContent(gherkinContent);
+      setFileType('gherkin');
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <button 
-                      className="p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-left"
-                      onClick={() => {/* TODO: Implement AI chat */}}
-                    >
-                      <h3 className="font-medium text-blue-400">Ask AI Assistant</h3>
-                      <p className="text-sm text-gray-400">Get explanations by asking questions about code</p>
-                    </button>
+    } catch (error) {
+      console.error('Error generating Gherkin:', error);
+      setError('Failed to generate Gherkin. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-                    <div 
-                      className="p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <h3 className="font-medium text-blue-400">Open Debug File</h3>
-                      <p className="text-sm text-gray-400">Load a compatible debug info file</p>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".pseudo,.feature,.gherkin,.json"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
+  const handleJsonGenerate = async (prompt: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-                  <div className="text-xs text-gray-500">
-                    Supported formats: .pseudo, .feature, .gherkin, debug info .json
-                  </div>
-                </div>
-              </div>
-            </div>
+      const response = await generateDebugInfoJson(prompt);
+      if ('error' in response) {
+        throw new Error(response.error);
+      }
+      
+      setParsedGitContent(response.feature);
+      setFileType('debug-info-json');
+      setFileContent(null);
+
+    } catch (error) {
+      console.error('Error generating JSON:', error);
+      setError('Failed to generate JSON. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderPromptForm = () => {
+    const hasInput = inputValue.trim().length > 0;
+
+    return (
+      <form 
+        className="relative"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <textarea
+          placeholder="Enter a scenario or topic to explore and debug (e.g., 'Linux Kernel - Process Switching', 'Git - Commit Workflow')"
+          className="w-full h-40 bg-gray-900 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          disabled={isLoading}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+        />
+        <div className="absolute right-3 bottom-3">
+          <button 
+            onClick={() => {
+              if (inputValue.trim()) {
+                handleJsonGenerate(inputValue.trim());
+              }
+            }}
+            disabled={isLoading || !hasInput}
+            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200
+              ${isLoading 
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                : hasInput
+                  ? 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-600 hover:to-indigo-600 shadow-lg'
+                  : 'bg-gray-800 text-gray-600'}`}
+            title="Start Debugging"
+          >
+            {isLoading ? (
+              <span>...</span>
+            ) : (
+              <ChevronRight size={20} />
+            )}
+          </button>
+        </div>
+      </form>
+    );
+  };
+
+  const renderLandingPage = () => {
+    const hasInput = inputValue.trim().length > 0;
+
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="fixed top-6 left-6">
+          <div className="flex items-center gap-2">
+            <DebugLensIcon className="w-6 h-6" />
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-violet-400 text-transparent bg-clip-text">
+              DebugLens
+            </span>
           </div>
         </div>
-      ) : (
+
+        <div className="max-w-4xl w-full space-y-8">
+          {/* Main Heading */}
+          <div className="text-center space-y-3">
+            <h1 className="text-4xl font-bold text-white">
+              What do you want to Explore?
+            </h1>
+            <p className="text-xl text-gray-400">
+            Dive into famous codebases or debug your own with AI-powered code abstraction.
+            </p>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {/* Enhanced Central Prompt Box */}
+          <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
+            {renderPromptForm()}
+          </div>
+
+          {/* Suggestions Section */}
+          <div className="space-y-6">
+            {/* Famous Codebases Section Title */}
+            <div className="flex items-center justify-center gap-4">
+              <div className="h-px bg-gray-700/50 w-24"></div>
+              <span className="text-xs text-gray-500">quick starts</span>
+              <div className="h-px bg-gray-700/50 w-24"></div>
+            </div>
+
+            {/* Suggestion Links */}
+            <div className="flex flex-wrap justify-center gap-4 max-w-xl mx-auto">
+              {EXPLORE_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion.name}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+                  onClick={() => setInputValue(`Explain ${suggestion.name} ${suggestion.description}`)}
+                >
+                  <FontAwesomeIcon 
+                    icon={suggestion.icon} 
+                    className="w-4 h-4 text-gray-500"
+                  />
+                  <span>{suggestion.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Divider for Custom Codebase */}
+            <div className="flex items-center justify-center gap-4">
+              <div className="h-px bg-gray-700 w-32"></div>
+              <span className="text-sm text-gray-500">or</span>
+              <div className="h-px bg-gray-700 w-32"></div>
+            </div>
+
+            {/* Load Custom Codebase Button Section */}
+            <div className="flex justify-center gap-4">
+              {isFeatureEnabled('LOAD_CUSTOM_CODEBASE') && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-3 px-6 py-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition-colors text-white group"
+                >
+                  <Upload className="w-5 h-5 text-blue-400 group-hover:text-blue-300" />
+                  <div className="text-left">
+                    <div className="font-medium">Load Custom Codebase</div>
+                    <div className="text-sm text-gray-400">Debug and explore your own code</div>
+                  </div>
+                </button>
+              )}
+
+              {isFeatureEnabled('GENERATE_DEBUG_SCENARIO') && (
+                <button
+                  onClick={() => {
+                    if (inputValue.trim()) {
+                      handleGherkinGenerate(inputValue.trim());
+                    }
+                  }}
+                  disabled={isLoading || !hasInput}
+                  className="flex items-center gap-3 px-6 py-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:bg-gray-700/50 transition-colors text-white group"
+                >
+                  <MessageSquare className="w-5 h-5 text-blue-400 group-hover:text-blue-300" />
+                  <div className="text-left">
+                    <div className="font-medium">Generate Debug Scenario</div>
+                    <div className="text-sm text-gray-400">Create behavior scenarios</div>
+                  </div>
+                </button>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pseudo,.feature,.gherkin,.json"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          {/* Help Links */}
+          <div className="flex justify-center gap-6 text-sm">
+            <a href="#" className="text-gray-400 hover:text-white">Documentation</a>
+            <a href="#" className="text-gray-400 hover:text-white">Learn DebugLens</a>
+            <a href="#" className="text-gray-400 hover:text-white">Get Support</a>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-900">
+      {/* Show loading overlay when isLoading is true */}
+      {isLoading && <DebugLoadingAnimation />}
+
+      {!fileType ? renderLandingPage() : (
         <div className="flex-1 flex flex-col overflow-hidden">
           {renderViewer()}
         </div>
       )}
+
+      <AIChatDialog 
+        isOpen={isAIChatOpen} 
+        onClose={() => setIsAIChatOpen(false)}
+        shortcutHint="Ctrl+L"
+      />
     </div>
-  );
+  );  
 }

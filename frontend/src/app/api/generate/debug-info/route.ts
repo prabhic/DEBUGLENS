@@ -1,345 +1,335 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { z } from 'zod';
+
+// Define response structure schema
+const ResponseSchema = z.object({
+  feature: z.object({
+    name: z.string(),
+    description: z.string(),
+    source: z.string(),
+    categories: z.record(z.object({
+      scenarios: z.array(z.string()),
+      complexity: z.string()
+    })).optional(),
+    flows: z.array(z.object({
+      name: z.string(),
+      complexity: z.string(),
+      time: z.string(),
+      prerequisites: z.string()
+    })),
+    scenarios: z.array(z.object({
+      name: z.string(),
+      description: z.string(),
+      tag: z.string(),
+      steps: z.array(z.object({
+        name: z.string(),
+        entryPoint: z.string().optional(),
+        sections: z.array(z.object({
+          name: z.string(),
+          codeBlocks: z.array(z.object({
+            name: z.string(),
+            code: z.array(z.string()),
+            variables: z.array(z.object({
+              name: z.string(),
+              previous: z.any().optional(),
+              current: z.any(),
+              type: z.string(),
+              important: z.boolean().optional()
+            })).optional(),
+            conceptDetails: z.object({
+              title: z.string(),
+              points: z.array(z.string()),
+              focus: z.string()
+            }).optional()
+          }))
+        }))
+      }))
+    }))
+  })
+});
+
+// Error handling utility
+const createErrorResponse = (message: string, details?: any) => {
+  console.error(`Error: ${message}`, details);
+  return NextResponse.json(
+    { error: message, details },
+    { status: 500 }
+  );
+};
+
+// Logging utility
+const logger = {
+  request: (prompt: string, payload: any) => {
+    console.log('\n=== Debug Info Generation Request ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Prompt:', prompt);
+    console.log('Payload:', JSON.stringify(payload, null, 2));
+  },
+  response: (prompt: string, response: any) => {
+    console.log('\n=== Debug Info Generation Response ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Prompt:', prompt);
+    console.log('Response:', JSON.stringify(response, null, 2));
+  }
+};
 
 export async function POST(request: Request) {
   try {
+    // 1. Request Validation
     const { prompt } = await request.json();
+    if (!prompt) {
+      return createErrorResponse('Prompt is required');
+    }
 
-    // Create the LLM request payload
-    const llmPayload = {
-      model: process.env.CLAUDE_MODEL,
-      messages: [
-        { 
-          role: 'user', 
-          content: `You are tasked with generating a detailed debug info in JSON format,  for  topic on ${prompt}.. This JSON file will be used in a debuglens debugger, which allows users to step through code blocks, watch variable changes, and understand concepts in a debug editor.
+    // 2. Enhanced System Prompt with JSON Template
+    const systemPrompt = `Generate a detailed debug walkthrough explaining how ${prompt} is implemented internally in the source code. Focus on the actual implementation details, data structures, and algorithms used, not on how to use the feature.
 
-The JSON should look similar to below example
+Your response must follow this exact JSON structure:
 
-<json_structure>
 {
   "feature": {
-    "name": "Git Internal Operations",
-    "description": "Understanding Git's core operations and data structures",
-    "source": "git/git source code learning",
+    "name": "string - Name of the feature being debugged",
+    "description": "string - Detailed description of the feature",
+    "source": "string - Source/context of the feature",
     "categories": {
-      "Basics": {
-        "scenarios": ["Object Storage", "Simple Commits"],
-        "complexity": "Beginner"
-      },
-      "Advanced": {
-        "scenarios": ["Merging", "Rebasing", "Cherry-picking"],
-        "complexity": "Advanced"
-      },
-      "Internals": {
-        "scenarios": ["Hash Objects", "Pack Files", "Refs"],
-        "complexity": "Expert"
+      "category_name": {
+        "scenarios": ["array of scenario names that belong to this category"],
+        "complexity": "string - one of: Basic, Advanced, Expert"
       }
     },
     "flows": [
       {
-        "name": "Object Storage",
-        "complexity": "Basic",
-        "time": "5 mins",
-        "prerequisites": "None"
-      },
-      {
-        "name": "Commit Creation",
-        "complexity": "Basic",
-        "time": "8 mins",
-        "prerequisites": "Object Storage"
-      },
-      {
-        "name": "Merge Process",
-        "complexity": "Advanced",
-        "time": "10 mins",
-        "prerequisites": "Commit Creation"
-      },
-      {
-        "name": "Rebase Operation",
-        "complexity": "Advanced",
-        "time": "15 mins",
-        "prerequisites": "Merge Process"
+        "name": "string - Name of the debug flow",
+        "complexity": "string - Complexity level",
+        "time": "string - Estimated time (e.g., '5 mins')",
+        "prerequisites": "string - Required prior knowledge"
       }
     ],
     "scenarios": [
       {
-        "name": "Git Object Storage Internals",
-        "description": "How Git stores content in its object database",
-        "tag": "BasicScenario",
+        "name": "string - Must match a scenario name from categories",
+        "description": "string - Detailed scenario description",
+        "tag": "string - Category tag (e.g., BasicScenario)",
         "steps": [
           {
-            "name": "Initialize Repository Structure",
-            "entryPoint": "Initialize empty repository",
+            "name": "string - Step name",
+            "entryPoint": "string - Optional entry point description",
             "sections": [
               {
-                "name": "Repository Setup",
+                "name": "string - Section name",
                 "codeBlocks": [
                   {
-                    "name": "Initial Structure",
-                    "code": [
-                      "repo = {",
-                      "  'latest_commit': None,",
-                      "  'refs': {'HEAD': None, 'main': None},",
-                      "  'objects': {}",
-                      "}"
-                    ],
+                    "name": "string - Unique name for the code block",
+                    "code": ["array of code lines"],
                     "variables": [
                       {
-                        "name": "repo",
-                        "previous": null,
-                        "current": {
-                          "latest_commit": null,
-                          "refs": { "HEAD": null, "main": null },
-                          "objects": {}
-                        },
-                        "type": "dictionary",
-                        "important": true
+                        "name": "string - Variable name",
+                        "previous": "any - Previous value (optional)",
+                        "current": "any - Current value",
+                        "type": "string - Variable type",
+                        "important": "boolean - Whether this is a key variable"
                       }
                     ],
                     "conceptDetails": {
-                      "title": "Git Repository Structure",
-                      "points": [
-                        "Stores the latest commit reference.",
-                        "Manages object storage."
-                      ],
-                      "focus": "Understanding Git's internal data structure."
-                    }
-                  },
-                  {
-                    "name": "Collections Init",
-                    "code": [
-                      "commits = []",
-                      "blobs = []",
-                      "trees = []"
-                    ],
-                    "variables": [
-                      {
-                        "name": "commits",
-                        "current": [],
-                        "type": "array",
-                        "important": true
-                      },
-                      {
-                        "name": "blobs",
-                        "current": [],
-                        "type": "array",
-                        "important": true
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "Create Blobs",
-            "entryPoint": "Create content blobs for storage",
-            "sections": [
-              {
-                "name": "Content Storage",
-                "codeBlocks": [
-                  {
-                    "name": "Define Changes",
-                    "code": [
-                      "changes = [",
-                      "  {'path': 'README.md', 'content': '# Project'},",
-                      "  {'path': 'main.py', 'content': 'print(hello)'}",
-                      "]"
-                    ]
-                  },
-                  {
-                    "name": "Blob Creation Loop",
-                    "code": [
-                      "for file in changes:",
-                      "  content_hash = calculate_hash(file['content'])",
-                      "  blob = { 'type': 'blob', 'content': file['content'], 'hash': content_hash }",
-                      "  blobs.append(blob)",
-                      "  repo['objects'][content_hash] = blob"
-                    ],
-                    "variables": [
-                      {
-                        "name": "content_hash",
-                        "previous": null,
-                        "current": "8c7e5a667f1b771847fe88c01c3de34413a1b08d",
-                        "type": "string",
-                        "important": true
-                      },
-                      {
-                        "name": "blob",
-                        "previous": null,
-                        "current": { "type": "blob", "content": "file content" },
-                        "type": "dictionary",
-                        "important": true
-                      }
-                    ],
-                    "conceptDetails": {
-                      "title": "Blob Creation Process",
-                      "points": [
-                        "Content addressing using SHA-1",
-                        "Immutable storage",
-                        "Content deduplication"
-                      ],
-                      "focus": "How Git identifies unique content"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "Build Tree",
-            "entryPoint": "Organize blobs into a directory tree",
-            "sections": [
-              {
-                "name": "Directory Structure",
-                "codeBlocks": [
-                  {
-                    "name": "Tree Creation",
-                    "code": [
-                      "tree = {",
-                      "  'type': 'tree',",
-                      "  'entries': [],",
-                      "  'hash': None",
-                      "}"
-                    ],
-                    "variables": [
-                      {
-                        "name": "tree",
-                        "previous": null,
-                        "current": { "type": "tree", "entries": [] },
-                        "type": "dictionary",
-                        "important": true
-                      }
-                    ],
-                    "conceptDetails": {
-                      "title": "Tree Structure",
-                      "points": [
-                        "Represents directory state",
-                        "Links to blobs (files)",
-                        "Modes indicate file permissions"
-                      ],
-                      "focus": "Organizing content in a hierarchical structure"
+                      "title": "string - Concept title",
+                      "points": ["array of key points about the concept"],
+                      "focus": "string - Main learning focus"
                     }
                   }
                 ]
               }
             ]
           }
-
         ]
       }
-
     ]
   }
 }
 
+Important Requirements:
+1. Focus on ACTUAL IMPLEMENTATION CODE, not usage examples
+2. Show the real internal data structures and algorithms
+3. Track internal state changes in core data structures
+4. Explain implementation decisions and their implications
+5. Each code block should show a distinct part of the internal implementation
+6. Include important edge cases in the implementation
 
-</json_structure>
+Example focus areas:
+- Internal data structures used
+- Memory management approaches
+- Algorithm implementation details
+- Performance optimizations
+- Edge case handling
+- Error handling mechanisms
+- State management internals
 
+The goal is to understand HOW the feature works internally, not how to use it.
 
-Generate the complete JSON output related to ${prompt}` 
+Important Requirements:
+1. Focus on creating ONE complete, coherent debugging scenario
+2. Each code block should contain real, executable code
+3. Track meaningful variable state changes
+4. Include clear concept explanations at each step
+5. Each code block must have a unique name
+6. Ensure proper flow between steps
+
+Make the scenario detailed but focused - quality over quantity.`;
+
+    // 3. Create Enhanced LLM Request
+    const llmPayload = {
+      model: process.env.CLAUDE_MODEL,
+      system: systemPrompt,
+      messages: [
+        { 
+          role: 'user',
+          content: `Create a detailed debugging scenario for: ${prompt}. Include multiple steps with variable states, meaningful code blocks, and clear conceptual explanations.`
         }
       ],
       max_tokens: 4000,
+      temperature: 0.7 // Add some creativity while maintaining coherence
     };
 
-    // Log the LLM request
-    console.log('\n=== LLM Request ===');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('Endpoint:', process.env.CLAUDE_API_ENDPOINT);
-    console.log('Model:', process.env.CLAUDE_MODEL);
-    console.log('User Prompt:', prompt);
-    console.log('Full Payload:', JSON.stringify(llmPayload, null, 2));
+    // 4. Log Request
+    logger.request(prompt, llmPayload);
 
+    // 5. Make API Request with Error Handling
     const response = await fetch(process.env.CLAUDE_API_ENDPOINT!, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.CLAUDE_API_KEY!,
-        'anthropic-version': '2023-06-01',
+        'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify(llmPayload),
+      body: JSON.stringify(llmPayload)
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      throw new Error(`API error: ${response.status} - ${await response.text()}`);
     }
 
+    // 6. Process Response
     const data = await response.json();
+
+    // Log raw response
+    console.log('\n=== Raw API Response ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Complete Response:', data);
+    console.log('======================\n');
     
-    try {
-      // Extract the content from Claude's response
-      const content = data.content[0].text;
-      
-      // Update to handle both old and new Claude API response formats
-      let messageContent;
-      if (data.content && Array.isArray(data.content)) {
-        // New format: content array with text property
-        messageContent = data.content[0].text;
-      } else if (data.completion) {
-        // Old format: completion property
-        messageContent = data.completion;
-      } else {
-        throw new Error('Unexpected API response format');
-      }
-      
-      // Find the JSON part of the response
-      const jsonMatch = messageContent.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
-      }
-      
-      const jsonContent = JSON.parse(jsonMatch[0]);
-      
-      // Log to console
-      console.log('\n=== Debug Info Generation Response ===');
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('Original Prompt:', prompt);
-      console.log('Full Response:', content);
-      console.log('Parsed JSON:', JSON.stringify(jsonContent, null, 2));
-
-      // Save to temp file
-      const tempDir = path.join(process.cwd(), 'temp');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `debug-info-${timestamp}.json`;
-
-      try {
-        // Create temp directory if it doesn't exist
-        await fs.mkdir(tempDir, { recursive: true });
-        
-        // Write the response to a file
-        await fs.writeFile(
-          path.join(tempDir, filename),
-          JSON.stringify({
-            timestamp: new Date().toISOString(),
-            prompt,
-            fullResponse: content,
-            parsedJson: jsonContent
-          }, null, 2)
-        );
-
-        console.log(`Response saved to: temp/${filename}`);
-      } catch (writeError) {
-        console.error('Error writing to temp file:', writeError);
-      }
-      
-      // Validate the structure
-      if (!jsonContent.feature || !jsonContent.feature.scenarios) {
-        throw new Error('Invalid JSON structure');
-      }
-      
-      return NextResponse.json(jsonContent);
-    } catch (parseError) {
-      console.error('Error parsing JSON from Claude:', parseError);
-      throw new Error('Invalid JSON format received from Claude');
+    // Extract content based on API version
+    const messageContent = data.content?.[0]?.text || data.completion;
+    if (!messageContent) {
+      throw new Error('No content in API response');
     }
+
+    // Log extracted message content
+    console.log('\n=== Raw Message Content ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Content:', messageContent);
+    console.log('========================\n');
+
+    // 7. Extract and Validate JSON
+    const jsonMatch = messageContent.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response');
+    }
+
+    const jsonContent = JSON.parse(jsonMatch[0]);
+
+    // Add detailed logging before validation
+    console.log('\n=== Pre-Validation Response Content ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Raw JSON Structure:', JSON.stringify(jsonContent, null, 2));
+    console.log('Feature Name:', jsonContent?.feature?.name);
+    console.log('Number of Scenarios:', jsonContent?.feature?.scenarios?.length);
+    console.log('Categories:', Object.keys(jsonContent?.feature?.categories || {}));
+    console.log('=======================================\n');
+
+    // 8. Schema Validation
+    const validationResult = ResponseSchema.safeParse(jsonContent);
+    if (!validationResult.success) {
+      console.error('\n=== Validation Error Details ===');
+      console.error('Error:', validationResult.error.message);
+      console.error('Failed at:', validationResult.error.errors);
+      console.error('===============================\n');
+      throw new Error(`Invalid response structure: ${validationResult.error.message}`);
+    }
+
+    // Only validate code block name uniqueness
+    const codeBlockNames = new Set();
+    for (const scenario of jsonContent.feature.scenarios) {
+      for (const step of scenario.steps) {
+        for (const section of step.sections) {
+          for (const block of section.codeBlocks) {
+            if (codeBlockNames.has(block.name)) {
+              throw new Error(`Duplicate code block name found: ${block.name}`);
+            }
+            codeBlockNames.add(block.name);
+          }
+        }
+      }
+    }
+
+    // Validate proper variable state transitions
+    for (const scenario of jsonContent.feature.scenarios) {
+      for (const step of scenario.steps) {
+        for (const section of step.sections) {
+          for (const block of section.codeBlocks) {
+            if (block.variables) {
+              for (const variable of block.variables) {
+                if (variable.previous !== undefined && 
+                    variable.previous === variable.current) {
+                  console.warn(`Warning: Variable ${variable.name} shows no state change`);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 9. Save Response for Analysis
+    const tempDir = path.join(process.cwd(), 'temp');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `debug-info-${timestamp}.json`;
+
+    await fs.mkdir(tempDir, { recursive: true });
+    await fs.writeFile(
+      path.join(tempDir, filename),
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        prompt,
+        response: jsonContent
+      }, null, 2)
+    );
+
+    // 10. Log Response
+    //logger.response(prompt, jsonContent);
+
+    // 11. Enrich Response with Metadata
+    const enrichedResponse = {
+      ...jsonContent,
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        prompt,
+        model: process.env.CLAUDE_MODEL,
+        savedAs: filename
+      }
+    };
+
+    return NextResponse.json(enrichedResponse);
 
   } catch (error) {
-    console.error('Error generating debug info:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate debug info' },
-      { status: 500 }
-    );
+    let errorMessage = 'Failed to generate debug info';
+    let errorDetails = null;
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = error.stack;
+    }
+
+    return createErrorResponse(errorMessage, errorDetails);
   }
-} 
+}
