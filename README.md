@@ -2,9 +2,7 @@
 
 An AI-powered code debugging and visualization tool that helps developers understand code behavior through abstract representation and analysis.
 
-![Overview Diagram](./docs/images/DebugLens-Overview.png)
-
-![Debug View](./docs/images/DebugLens-Overview-2.png)
+![Overview Diagram](./docs/images/DebugLens-OverviewGIF.gif)
 
 ## Overview
 
