@@ -97,32 +97,63 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      {!fileType && (
-        <div className="flex-1 flex items-center justify-center bg-gray-900">
-          <div className="text-center p-8 rounded-lg">
-            <h1 className="text-2xl font-bold text-white mb-6">DebugLens</h1>
-            <p className="text-gray-400 mb-4">Upload a file to start debugging</p>
-            <div className="space-y-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pseudo,.feature,.gherkin,.json"
-                onChange={handleFileSelect}
-                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0 file:text-sm file:font-semibold
-                  file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600
-                  cursor-pointer"
-              />
-              <p className="text-xs text-gray-500">
-                Supported formats: .pseudo, .feature, .gherkin, debug info .json
-              </p>
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-900">
+      {!fileType ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="max-w-2xl w-full p-8">
+            <div className="text-center space-y-6">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-white">DebugLens</h1>
+                <p className="text-lg text-gray-400">
+                  Interactive Code Learning & Debugging Assistant
+                </p>
+              </div>
+
+              <div className="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h2 className="text-xl font-semibold text-white">Get Started</h2>
+                    <p className="text-gray-400">Choose how you want to explore code:</p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <button 
+                      className="p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors text-left"
+                      onClick={() => {/* TODO: Implement AI chat */}}
+                    >
+                      <h3 className="font-medium text-blue-400">Ask AI Assistant</h3>
+                      <p className="text-sm text-gray-400">Get explanations by asking questions about code</p>
+                    </button>
+
+                    <div 
+                      className="p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <h3 className="font-medium text-blue-400">Open Debug File</h3>
+                      <p className="text-sm text-gray-400">Load a compatible debug info file</p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pseudo,.feature,.gherkin,.json"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500">
+                    Supported formats: .pseudo, .feature, .gherkin, debug info .json
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      ) : (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {renderViewer()}
+        </div>
       )}
-      
-      {renderViewer()}
     </div>
   );
 }

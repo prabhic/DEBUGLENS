@@ -4,6 +4,8 @@ An AI-powered code debugging and visualization tool that helps developers unders
 
 ![Overview Diagram](./docs/images/DebugLens-Overview.png)
 
+![Debug View](./docs/images/DebugLens-Overview-2.png)
+
 ## Overview
 
 DebugLens is a debugging tool that provides:

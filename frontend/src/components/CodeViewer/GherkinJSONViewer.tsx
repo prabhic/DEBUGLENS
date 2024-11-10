@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, FC } from 'react'
+import React, { useState, FC, useEffect } from 'react'
 import { GitFeatureContent, Category, VariableState } from '@/types/gherkin'
 import { ResizablePanel } from '@/components/CodeViewer/ResizablePanel'
 import { CodeLine } from './CodeLine'
@@ -11,27 +11,29 @@ interface GherkinJSONViewerProps {
   onReset: () => void;
 }
 
+interface ScenarioStep {
+  name: string;
+  entryPoint?: string;
+  sections: {
+    name: string;
+    codeBlocks: {
+      name: string;
+      code: string[];
+      variables?: VariableState[];
+      conceptDetails?: {
+        title: string;
+        points: string[];
+        focus: string;
+      };
+    }[];
+  }[];
+}
+
 interface ScenarioData {
   name: string;
   description: string;
   tag: string;
-  steps: {
-    name: string;
-    entryPoint?: string;
-    regions: {
-      name: string;
-      breakpoints: {
-        name: string;
-        code: string[];
-        variables?: VariableState[];
-        concepts?: {
-          title: string;
-          points: string[];
-          focus: string;
-        };
-      }[];
-    }[];
-  }[];
+  steps: ScenarioStep[];
 }
 
 interface VariablesPanelProps {
@@ -41,45 +43,87 @@ interface VariablesPanelProps {
 const VariablesPanel: FC<VariablesPanelProps> = ({ variables }) => {
   if (variables.length === 0) return null;
 
+  // Helper function to format value with syntax highlighting
+  const formatValue = (value: any): string => {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'object') {
+      try {
+        // Pretty print objects with 2-space indentation
+        return JSON.stringify(value, null, 2);
+      } catch (e) {
+        return String(value);
+      }
+    }
+    return String(value);
+  };
+
+  // Group variables by their type for better organization
+  const groupedVariables = variables.reduce((acc, variable) => {
+    const group = variable.type || 'other';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(variable);
+    return acc;
+  }, {} as Record<string, VariableState[]>);
+
   return (
     <div className="bg-gray-800 text-gray-100 rounded-lg border border-gray-700 overflow-hidden h-full">
       <div className="bg-gray-700 px-4 py-2 border-b border-gray-600">
-        <h3 className="text-sm font-semibold text-white">Variables Watch</h3>
+        <h3 className="text-sm font-semibold text-white">Data Structure Watch</h3>
       </div>
 
-      <div className="w-full">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-700/50 border-b border-gray-600">
-            <tr>
-              <th className="text-left py-2 px-4 font-medium text-gray-300">Name</th>
-              <th className="text-left py-2 px-4 font-medium text-gray-300">Previous</th>
-              <th className="text-left py-2 px-4 font-medium text-gray-300">Current</th>
-              <th className="text-left py-2 px-4 font-medium text-gray-300">Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            {variables.map((variable, index) => (
-              <tr 
+      <div className="divide-y divide-gray-700">
+        {Object.entries(groupedVariables).map(([type, vars]) => (
+          <div key={type} className="p-2">
+            <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+              {type} Structures
+            </div>
+            
+            {vars.map((variable, index) => (
+              <div 
                 key={index}
-                className={`border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors
-                  ${variable.changed ? 'bg-yellow-500/10' : ''}`}
+                className={`mb-3 rounded-lg p-3 ${
+                  variable.important ? 'bg-yellow-500/10 border border-yellow-500/30' 
+                  : 'bg-gray-700/30'
+                }`}
               >
-                <td className="py-2 px-4">
+                <div className="flex items-center justify-between mb-2">
                   <span className="font-mono text-blue-300">{variable.name}</span>
-                </td>
-                <td className="py-2 px-4">
-                  <span className="font-mono text-gray-400">{variable.previous || '-'}</span>
-                </td>
-                <td className="py-2 px-4">
-                  <span className="font-mono text-green-300 break-all">{variable.current || variable.value}</span>
-                </td>
-                <td className="py-2 px-4">
-                  <span className="text-gray-400">{variable.type}</span>
-                </td>
-              </tr>
+                  <span className="text-xs px-2 py-1 rounded-full bg-gray-700 text-gray-300">
+                    {variable.type}
+                  </span>
+                </div>
+
+                {/* Show changes if there's a previous value */}
+                {variable.previous !== undefined && (
+                  <div className="mb-2">
+                    <div className="text-xs text-gray-400 mb-1">Previous:</div>
+                    <pre className="font-mono text-sm text-gray-400 bg-gray-800/50 p-2 rounded overflow-auto">
+                      {formatValue(variable.previous)}
+                    </pre>
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-xs text-gray-400 mb-1">Current:</div>
+                  <pre className="font-mono text-sm text-green-300 bg-gray-800/50 p-2 rounded overflow-auto">
+                    {formatValue(variable.current)}
+                  </pre>
+                </div>
+
+                {/* Show change indicator if value changed */}
+                {variable.previous !== undefined && variable.previous !== variable.current && (
+                  <div className="mt-2 text-xs text-yellow-400 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m0-16l4 4m-4-4l-4 4" />
+                    </svg>
+                    Value changed
+                  </div>
+                )}
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -127,31 +171,35 @@ interface ConceptsPanelProps {
 
 const ConceptsPanel: FC<ConceptsPanelProps> = ({ concepts }) => {
   return (
-    <div className="bg-gray-800 text-gray-100 rounded-lg border border-gray-700 overflow-hidden mt-4">
-      <div className="bg-gray-700 px-4 py-2 border-b border-gray-600">
-        <h3 className="text-sm font-semibold text-white">Concepts</h3>
-      </div>
+    <div className="border-t border-gray-700 bg-gray-800">
       <div className="p-4">
-        <h4 className="text-lg font-medium text-blue-400 mb-2">{concepts.title}</h4>
-        <ul className="list-disc list-inside space-y-2 text-sm text-gray-300">
-          {concepts.points.map((point, index) => (
-            <li key={index}>{point}</li>
-          ))}
-        </ul>
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <h5 className="text-sm font-medium text-gray-400">Current Focus</h5>
-          <p className="text-sm text-green-400 mt-1">{concepts.focus}</p>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-white">Concepts</h3>
+          <h4 className="text-lg font-medium text-blue-400">{concepts.title}</h4>
+        </div>
+        <div className="flex gap-8">
+          <div className="flex-1">
+            <ul className="list-disc list-inside space-y-2 text-sm text-gray-300">
+              {concepts.points.map((point, index) => (
+                <li key={index}>{point}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex-1">
+            <h5 className="text-sm font-medium text-gray-400 mb-2">Current Focus</h5>
+            <p className="text-sm text-green-400">{concepts.focus}</p>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-interface BreakpointInfo {
+interface CodeBlockInfo {
   stepIndex: number;
-  regionIndex: number;
-  breakpointIndex: number;
-  breakpoint: ScenarioData['steps'][0]['regions'][0]['breakpoints'][0];
+  sectionIndex: number;
+  codeBlockIndex: number;
+  codeBlock: ScenarioData['steps'][0]['sections'][0]['codeBlocks'][0];
 }
 
 export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset }) => {
@@ -163,9 +211,9 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
   const [isDebugging, setIsDebugging] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [breakpoints, setBreakpoints] = useState<Set<string>>(new Set());
-  const [currentBreakpointIndex, setCurrentBreakpointIndex] = useState<number>(0);
-  const [activeBreakpoint, setActiveBreakpoint] = useState<BreakpointInfo | null>(null);
-  const [allBreakpoints, setAllBreakpoints] = useState<BreakpointInfo[]>([]);
+  const [currentCodeBlockIndex, setCurrentCodeBlockIndex] = useState<number>(0);
+  const [activeCodeBlock, setActiveCodeBlock] = useState<CodeBlockInfo | null>(null);
+  const [allCodeBlocks, setAllCodeBlocks] = useState<CodeBlockInfo[]>([]);
 
   // Select first category by default
   React.useEffect(() => {
@@ -227,31 +275,60 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
       steps: scenario.steps.map(step => ({
         name: step.name || '',
         entryPoint: step.entryPoint,
-        regions: step.regions || []
+        sections: step.sections.map(section => ({
+          name: section.name,
+          codeBlocks: section.codeBlocks.map(block => ({
+            name: block.name,
+            code: block.code,
+            variables: block.variables,
+            conceptDetails: block.conceptDetails
+          }))
+        }))
       }))
     };
   };
 
-  const handleBreakpointClick = (
-    breakpoint: ScenarioData['steps'][0]['regions'][0]['breakpoints'][0],
+  const handleCodeBlockClick = (
+    codeBlock: ScenarioData['steps'][0]['sections'][0]['codeBlocks'][0],
     stepIndex: number,
-    regionIndex: number,
-    breakpointIndex: number
+    sectionIndex: number,
+    codeBlockIndex: number
   ) => {
-    if (breakpoint.variables) {
-      setVariables(breakpoint.variables);
+    if (codeBlock.variables) {
+      setVariables(codeBlock.variables);
     }
-    if (breakpoint.concepts) {
-      setCurrentConcepts(breakpoint.concepts);
+    if (codeBlock.conceptDetails) {
+      setCurrentConcepts(codeBlock.conceptDetails);
     }
     
     if (isDebugging) {
-      setActiveBreakpoint({
+      setActiveCodeBlock({
         stepIndex,
-        regionIndex,
-        breakpointIndex,
-        breakpoint
+        sectionIndex,
+        codeBlockIndex,
+        codeBlock
       });
+
+      // Add auto-scroll functionality
+      setTimeout(() => {
+        const activeElement = document.querySelector('[data-active-block="true"]');
+        if (activeElement) {
+          const container = activeElement.closest('.overflow-y-auto');
+          if (container) {
+            const elementRect = activeElement.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            // Check if element is below the visible area
+            if (elementRect.bottom > containerRect.bottom) {
+              activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            // Check if element is above the visible area
+            else if (elementRect.top < containerRect.top) {
+              activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        }
+      }, 0);
     }
   };
 
@@ -282,30 +359,31 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
               </div>
             )}
             
-            {/* Regions */}
-            {step.regions?.map((region, regionIndex) => (
-              <div key={regionIndex} className="pl-4 border-l-2 border-gray-700">
-                <div className="text-gray-400 text-sm mb-2">{region.name}</div>
+            {/* Sections (previously regions) */}
+            {step.sections?.map((section, sectionIndex) => (
+              <div key={sectionIndex} className="pl-4 border-l-2 border-gray-700">
+                <div className="text-gray-400 text-sm mb-2">{section.name}</div>
                 <div className="space-y-1">
-                  {/* Breakpoints */}
-                  {region.breakpoints.map((breakpoint, breakpointIndex) => (
+                  {/* CodeBlocks (previously breakpoints) */}
+                  {section.codeBlocks.map((codeBlock, codeBlockIndex) => (
                     <div 
-                      key={breakpointIndex}
+                      key={codeBlockIndex}
                       className="pl-4"
                     >
                       <button
-                        onClick={() => handleBreakpointClick(breakpoint, stepIndex, regionIndex, breakpointIndex)}
+                        onClick={() => handleCodeBlockClick(codeBlock, stepIndex, sectionIndex, codeBlockIndex)}
                         className={`text-left w-full p-2 rounded transition-colors relative
-                          ${breakpoints.has(breakpoint.name) ? 'border-l-2 border-red-500' : ''}
-                          ${activeBreakpoint?.breakpoint.name === breakpoint.name 
+                          ${breakpoints.has(codeBlock.name) ? 'border-l-2 border-red-500' : ''}
+                          ${activeCodeBlock?.codeBlock.name === codeBlock.name 
                             ? 'bg-blue-500/20 border-l-2 border-blue-500' 
                             : 'hover:bg-gray-800'}`}
-                        disabled={isDebugging && activeBreakpoint?.breakpoint.name !== breakpoint.name}
+                        disabled={isDebugging && activeCodeBlock?.codeBlock.name !== codeBlock.name}
+                        data-active-block={activeCodeBlock?.codeBlock.name === codeBlock.name}
                       >
                         <div className="flex items-center justify-between">
                           <div className="text-yellow-500 text-sm mb-1 flex items-center gap-2">
-                            {breakpoint.name}
-                            {activeBreakpoint?.breakpoint.name === breakpoint.name && (
+                            {codeBlock.name}
+                            {activeCodeBlock?.codeBlock.name === codeBlock.name && (
                               <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
                             )}
                           </div>
@@ -313,20 +391,20 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleBreakpoint(breakpoint.name);
+                                toggleBreakpoint(codeBlock.name);
                               }}
                               className={`px-2 py-1 rounded text-xs ${
-                                breakpoints.has(breakpoint.name)
+                                breakpoints.has(codeBlock.name)
                                   ? 'bg-red-500/20 text-red-300'
                                   : 'bg-gray-700 text-gray-400'
                               }`}
                             >
-                              {breakpoints.has(breakpoint.name) ? 'Remove Breakpoint' : 'Set Breakpoint'}
+                              {breakpoints.has(codeBlock.name) ? 'Remove Breakpoint' : 'Set Breakpoint'}
                             </button>
                           )}
                         </div>
                         <div className="font-mono text-sm text-gray-300 whitespace-pre">
-                          {breakpoint.code.join('\n')}
+                          {codeBlock.code.join('\n')}
                         </div>
                       </button>
                     </div>
@@ -350,103 +428,134 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
   const MIN_PANEL_WIDTH = 250;
   const MAX_PANEL_WIDTH = 800;
 
+  const scrollActiveStepIntoView = () => {
+    const activeElement = document.querySelector('[data-active-block="true"]');
+    if (!activeElement) return;
+
+    const container = activeElement.closest('.overflow-y-auto');
+    if (!container) return;
+
+    const elementRect = activeElement.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // Check if element is not fully visible
+    if (elementRect.top < containerRect.top || 
+        elementRect.bottom > containerRect.bottom) {
+      activeElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  };
+
   const handleStartDebugging = () => {
     const scenario = getCurrentScenario();
     if (!scenario) return;
 
-    // Collect all breakpoints in order
-    const bps: BreakpointInfo[] = [];
+    // Collect all code blocks
+    const codeBlocks: CodeBlockInfo[] = [];
     scenario.steps.forEach((step, stepIndex) => {
-      step.regions?.forEach((region, regionIndex) => {
-        region.breakpoints.forEach((bp, breakpointIndex) => {
-          // Only add if it's a set breakpoint
-          if (breakpoints.has(bp.name)) {
-            bps.push({
-              stepIndex,
-              regionIndex,
-              breakpointIndex,
-              breakpoint: bp
-            });
-          }
+      step.sections.forEach((section, sectionIndex) => {
+        section.codeBlocks.forEach((block, blockIndex) => {
+          codeBlocks.push({
+            stepIndex,
+            sectionIndex,
+            codeBlockIndex: blockIndex,
+            codeBlock: block
+          });
         });
       });
     });
 
-    if (bps.length === 0) return; // Don't start debugging if no breakpoints
+    // Find first breakpoint or start from beginning
+    let startIndex = 0;
+    if (breakpoints.size > 0) {
+      startIndex = codeBlocks.findIndex(block => breakpoints.has(block.codeBlock.name));
+      if (startIndex === -1) startIndex = 0;
+    }
 
-    setAllBreakpoints(bps);
+    setAllCodeBlocks(codeBlocks);
     setIsDebugging(true);
     setIsPaused(true);
-    setCurrentBreakpointIndex(0);
+    setCurrentCodeBlockIndex(startIndex);
 
-    // Set first breakpoint as active
-    const first = bps[0];
-    handleBreakpointClick(
-      first.breakpoint,
+    // Activate first code block
+    const first = codeBlocks[startIndex];
+    handleCodeBlockClick(
+      first.codeBlock,
       first.stepIndex,
-      first.regionIndex,
-      first.breakpointIndex
+      first.sectionIndex,
+      first.codeBlockIndex
     );
-    setActiveBreakpoint(first);
+    setActiveCodeBlock(first);
+
+    // Ensure scroll happens after state updates
+    setTimeout(scrollActiveStepIntoView, 100);
   };
 
   const handleContinue = () => {
-    if (!isDebugging || !activeBreakpoint) return;
+    if (!isDebugging || !activeCodeBlock) return;
 
-    const currentIndex = currentBreakpointIndex;
-    const nextIndex = currentIndex + 1;
+    let nextIndex = currentCodeBlockIndex + 1;
+    
+    // Find next breakpoint
+    while (nextIndex < allCodeBlocks.length) {
+      if (breakpoints.has(allCodeBlocks[nextIndex].codeBlock.name)) {
+        break;
+      }
+      nextIndex++;
+    }
 
-    if (nextIndex >= allBreakpoints.length) {
+    if (nextIndex >= allCodeBlocks.length) {
       // No more breakpoints, stop debugging
       handleStopDebugging();
       return;
     }
 
     // Move to next breakpoint
-    const next = allBreakpoints[nextIndex];
-    handleBreakpointClick(
-      next.breakpoint,
+    const next = allCodeBlocks[nextIndex];
+    handleCodeBlockClick(
+      next.codeBlock,
       next.stepIndex,
-      next.regionIndex,
-      next.breakpointIndex
+      next.sectionIndex,
+      next.codeBlockIndex
     );
-    setActiveBreakpoint(next);
-    setCurrentBreakpointIndex(nextIndex);
+    setActiveCodeBlock(next);
+    setCurrentCodeBlockIndex(nextIndex);
   };
 
   const handleStepOver = () => {
-    if (!isDebugging || !activeBreakpoint) return;
+    if (!isDebugging || !activeCodeBlock) return;
 
-    const currentIndex = currentBreakpointIndex;
-    const nextIndex = currentIndex + 1;
+    const nextIndex = currentCodeBlockIndex + 1;
 
-    if (nextIndex >= allBreakpoints.length) {
-      // No more breakpoints, stop debugging
+    if (nextIndex >= allCodeBlocks.length) {
+      // No more code blocks, stop debugging
       handleStopDebugging();
       return;
     }
 
-    // Move to next breakpoint
-    const next = allBreakpoints[nextIndex];
-    handleBreakpointClick(
-      next.breakpoint,
+    // Move to next code block
+    const next = allCodeBlocks[nextIndex];
+    handleCodeBlockClick(
+      next.codeBlock,
       next.stepIndex,
-      next.regionIndex,
-      next.breakpointIndex
+      next.sectionIndex,
+      next.codeBlockIndex
     );
-    setActiveBreakpoint(next);
-    setCurrentBreakpointIndex(nextIndex);
+    setActiveCodeBlock(next);
+    setCurrentCodeBlockIndex(nextIndex);
     setIsPaused(true);
   };
 
   const handleStopDebugging = () => {
     setIsDebugging(false);
     setIsPaused(false);
-    setCurrentBreakpointIndex(0);
-    setActiveBreakpoint(null);
+    setCurrentCodeBlockIndex(0);
+    setActiveCodeBlock(null);
     setVariables([]);
     setCurrentConcepts(null);
-    setAllBreakpoints([]);
+    setAllCodeBlocks([]);
   };
 
   const handleClearBreakpoints = () => {
@@ -465,56 +574,145 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
     });
   };
 
-  return (
-    <div className="h-screen flex flex-col bg-gray-900">
-      <DebugToolbar
-        isDebugging={isDebugging}
-        isPaused={isPaused}
-        hasBreakpoints={breakpoints.size > 0}
-        onStartDebugging={handleStartDebugging}
-        onStopDebugging={handleStopDebugging}
-        onContinue={handleContinue}
-        onStepOver={handleStepOver}
-        onClearBreakpoints={handleClearBreakpoints}
-      />
-      <div className="flex-1 flex min-h-0">
-        {/* Left panel - Categories and Scenarios */}
-        <div className="w-[250px] border-r border-gray-700 overflow-y-auto custom-scrollbar bg-gray-900">
-          {content.categories && (
-            <CategoryList
-              categories={content.categories}
-              selectedCategory={selectedCategory}
-              onSelectCategory={setSelectedCategory}
-            />
-          )}
-          {selectedCategory && content.categories && (
-            <div className="px-4">
-              <h3 className="text-sm font-semibold text-gray-300 mb-2">Scenarios</h3>
-              <div className="space-y-1">
-                {content.categories[selectedCategory].scenarios.map((scenario) => (
-                  <button
-                    key={scenario}
-                    className={`w-full text-left px-4 py-2 hover:bg-gray-700/50 transition-colors rounded
-                      ${selectedScenario === scenario ? 'bg-gray-700/70 text-blue-400' : 'text-gray-300'}`}
-                    onClick={() => handleScenarioSelect(scenario)}
-                  >
-                    {scenario}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+  const getCurrentDebugInfo = () => {
+    if (!activeCodeBlock) return null;
 
-        {/* Main content area with right panel */}
-        <div className="flex-1 flex min-h-0">
-          {/* Editor panel */}
-          <div className="flex-1 overflow-auto p-4 custom-scrollbar bg-gray-900">
-            {renderScenarioContent()}
+    const scenario = getCurrentScenario();
+    if (!scenario) return null;
+
+    const step = scenario.steps[activeCodeBlock.stepIndex];
+    const section = step.sections[activeCodeBlock.sectionIndex];
+    const block = section.codeBlocks[activeCodeBlock.codeBlockIndex];
+
+    return {
+      stepName: step.name,
+      sectionName: section.name,
+      blockName: block.name,
+      variables: block.variables || [],
+      concepts: block.conceptDetails
+    };
+  };
+
+  // Add keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Prevent F5 refresh regardless of debug state
+      if (event.key === 'F5') {
+        event.preventDefault(); // Move this before the debugging check
+      }
+
+      // Only handle debug shortcuts if debugging is active (except for F5 start)
+      if (!isDebugging && !['F5', 'F8', 'F10'].includes(event.key)) return;
+
+      switch (event.key) {
+        case 'F8':
+          event.preventDefault();
+          handleContinue();
+          break;
+        case 'F10':
+          event.preventDefault();
+          handleStepOver();
+          break;
+        case 'F5':
+          if (event.shiftKey) {
+            handleStopDebugging();
+          } else {
+            if (!isDebugging) {
+              handleStartDebugging();
+            } else {
+              handleStopDebugging();
+            }
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isDebugging, handleContinue, handleStepOver, handleStartDebugging, handleStopDebugging]);
+
+  return (
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Debug toolbar */}
+      <div className="flex-none bg-gray-900 border-b border-gray-700">
+        <div className="flex items-center h-12">
+          {/* Brand section - match sidebar width */}
+          <div className="w-64 flex items-center px-4">
+            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4V4C8 4 4 8 4 12V12C4 16 8 20 12 20V20C16 20 20 16 20 12V12C20 8 16 4 12 4Z" stroke="currentColor" strokeWidth="2"/>
+              <path d="M15 12L12 12M12 12L9 12M12 12L12 9M12 12L12 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <span className="text-white font-medium ml-3">DebugLens</span>
           </div>
 
-          {/* Variables and Concepts panel */}
-          {(variables.length > 0 || currentConcepts) && (
+          {/* Toolbar buttons - aligned with main content */}
+          <div className="px-4">
+            <DebugToolbar
+              isDebugging={isDebugging}
+              isPaused={isPaused}
+              hasBreakpoints={breakpoints.size > 0}
+              onStartDebugging={handleStartDebugging}
+              onStopDebugging={handleStopDebugging}
+              onContinue={handleContinue}
+              onStepOver={handleStepOver}
+              onClearBreakpoints={handleClearBreakpoints}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Main content area - fills remaining space with internal scrolling */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Left sidebar - fixed width with internal scroll */}
+        <div className="w-64 flex-none border-r border-gray-700 overflow-y-auto bg-gray-900">
+          <div className="p-4">
+            {content.categories && (
+              <CategoryList
+                categories={content.categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+              />
+            )}
+            {selectedCategory && content.categories && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-2">Scenarios</h3>
+                <div className="space-y-1">
+                  {content.categories[selectedCategory].scenarios.map((scenario) => (
+                    <button
+                      key={scenario}
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-700/50 transition-colors rounded
+                        ${selectedScenario === scenario ? 'bg-gray-700/70 text-blue-400' : 'text-gray-300'}`}
+                      onClick={() => handleScenarioSelect(scenario)}
+                    >
+                      {scenario}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Center and right panels - with internal scrolling */}
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* Code panel - with internal scroll */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4">
+                {renderScenarioContent()}
+              </div>
+            </div>
+            
+            {/* Concepts panel - fixed at bottom when visible */}
+            {currentConcepts && (
+              <div className="flex-none border-t border-gray-700">
+                <ConceptsPanel concepts={currentConcepts} />
+              </div>
+            )}
+          </div>
+
+          {/* Variables panel - resizable with internal scroll */}
+          {variables.length > 0 && (
             <ResizablePanel
               direction="horizontal"
               onResize={(delta) => {
@@ -526,10 +724,9 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
             >
               <div 
                 style={{ width: `${rightPanelWidth}px` }}
-                className="h-full bg-gray-900 p-4 space-y-4 custom-scrollbar overflow-auto"
+                className="h-full bg-gray-900 overflow-hidden flex flex-col"
               >
-                {variables.length > 0 && <VariablesPanel variables={variables} />}
-                {currentConcepts && <ConceptsPanel concepts={currentConcepts} />}
+                <VariablesPanel variables={variables} />
               </div>
             </ResizablePanel>
           )}
