@@ -54,3 +54,4 @@ Feature: DebugLens Frontend Tool
         Then execution should continue to the next breakpoint
         And all panels should update with new breakpoint information
         And the current line indicator should move to the new position
+

@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { PseudoCodeViewer } from '@/components/CodeViewer/PseudoCodeViewer';
-import { GherkinFeatureViewer } from '@/components/CodeViewer/GherkinFeatureViewer';
 import { GherkinJSONViewer } from '@/components/CodeViewer/GherkinJSONViewer';
 import { GitFeatureContent } from '@/types/gherkin';
 import { AIChatDialog } from '@/components/Chat/AIChatDialog';
@@ -255,21 +253,11 @@ export default function Home() {
   const renderViewer = () => {
     switch (fileType) {
       case 'pseudo':
-        return fileContent && (
-          <PseudoCodeViewer 
-            initialContent={fileContent} 
-            onReset={resetState}
-            onOpenAIChat={() => setIsAIChatOpen(true)}
-          />
-        );
+
+
       case 'gherkin':
-        return fileContent && (
-          <GherkinFeatureViewer 
-            initialContent={fileContent} 
-            onReset={resetState}
-            onOpenAIChat={() => setIsAIChatOpen(true)}
-          />
-        );
+
+
       case 'debug-info-json':
         return debugInfoJsonParsed && (
           <GherkinJSONViewer 
