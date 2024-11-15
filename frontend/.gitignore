@@ -31,7 +31,17 @@ temp/
 # Terraform
 **/.terraform/*
 *.tfstate
-*.tf
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
 
 # Large media files
 *.png filter=lfs diff=lfs merge=lfs -text
