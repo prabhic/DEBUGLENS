@@ -30,3 +30,6 @@ Thumbs.db
 *.tfstate.*
 *.tfvars
 *.tfvars.json
+.temp
+.temp/
+temp/
