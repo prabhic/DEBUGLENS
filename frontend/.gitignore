@@ -27,3 +27,13 @@ yarn-error.log*
 # Temp files
 /temp
 temp/
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tf
+
+# Large media files
+*.png filter=lfs diff=lfs merge=lfs -text
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
