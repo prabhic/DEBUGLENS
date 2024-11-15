@@ -1,0 +1,208 @@
+{
+  "timestamp": "2024-11-10T11:56:32.523Z",
+  "prompt": "how does linux switch process",
+  "fullResponse": "```json\n{\n  \"feature\": {\n    \"name\": \"Binary Search\",\n    \"description\": \"An efficient algorithm for finding an element in a sorted array.\",\n    \"source\": \"https://en.wikipedia.org/wiki/Binary_search_algorithm\",\n    \"categories\": {\n      \"Searching Algorithms\": {\n        \"scenarios\": [\n          \"Find an element in a sorted array\"\n        ],\n        \"complexity\": \"O(log n)\"\n      }\n    },\n    \"flows\": [\n      {\n        \"name\": \"Basic Binary Search\",\n        \"complexity\": \"O(log n)\",\n        \"time\": \"Logarithmic time\",\n        \"prerequisites\": \"The array must be sorted\"\n      }\n    ],\n    \"scenarios\": [\n      {\n        \"name\": \"Search Element in Sorted Array\",\n        \"description\": \"Find the index of a target element in a sorted array using binary search.\",\n        \"tag\": \"searching\",\n        \"steps\": [\n          {\n            \"name\": \"Binary Search\",\n            \"entryPoint\": \"binarySearch(arr, target)\",\n            \"sections\": [\n              {\n                \"name\": \"Initialize Pointers\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Initialize Left and Right Pointers\",\n                    \"code\": [\n                      \"let left = 0\",\n                      \"let right = arr.length - 1\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"left\",\n                        \"previous\": null,\n                        \"current\": 0,\n                        \"type\": \"number\",\n                        \"important\": true\n                      },\n                      {\n                        \"name\": \"right\",\n                        \"previous\": null,\n                        \"current\": 4,\n                        \"type\": \"number\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Pointers\",\n                      \"points\": [\n                        \"Left pointer represents the start index\",\n                        \"Right pointer represents the end index\"\n                      ],\n                      \"focus\": \"Setting the initial search range\"\n                    }\n                  }\n                ]\n              },\n              {\n                \"name\": \"Search Loop\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Loop Condition\",\n                    \"code\": [\n                      \"while (left <= right) {\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"left\",\n                        \"previous\": 0,\n                        \"current\": 0,\n                        \"type\": \"number\",\n                        \"important\": true\n                      },\n                      {\n                        \"name\": \"right\",\n                        \"previous\": 4,\n                        \"current\": 4,\n                        \"type\": \"number\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Loop Condition\",\n                      \"points\": [\n                        \"The loop continues as long as the left pointer is less than or equal to the right pointer\",\n                        \"This ensures the search range is valid\"\n                      ],\n                      \"focus\": \"Terminating condition for the search\"\n                    }\n                  },\n                  {\n                    \"name\": \"Calculate Middle Index\",\n                    \"code\": [\n                      \"let mid = Math.floor((left + right) / 2)\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"mid\",\n                        \"previous\": null,\n                        \"current\": 2,\n                        \"type\": \"number\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Middle Index\",\n                      \"points\": [\n                        \"The middle index is calculated as the average of the left and right pointers\",\n                        \"Math.floor ensures the middle index is an integer\"\n                      ],\n                      \"focus\": \"Calculating the middle index for comparison\"\n                    }\n                  },\n                  {\n                    \"name\": \"Compare Target with Middle Element\",\n                    \"code\": [\n                      \"if (arr[mid] === target) {\",\n                      \"  return mid\",\n                      \"} else if (arr[mid] < target) {\",\n                      \"  left = mid + 1\",\n                      \"} else {\",\n                      \"  right = mid - 1\",\n                      \"}\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"target\",\n                        \"previous\": 4,\n                        \"current\": 4,\n                        \"type\": \"number\",\n                        \"important\": true\n                      },\n                      {\n                        \"name\": \"arr[mid]\",\n                        \"previous\": null,\n                        \"current\": 3,\n                        \"type\": \"number\",\n                        \"important\": true\n                      },\n                      {\n                        \"name\": \"left\",\n                        \"previous\": 0,\n                        \"current\": 3,\n                        \"type\": \"number\",\n                        \"important\": true\n                      },\n                      {\n                        \"name\": \"right\",\n                        \"previous\": 4,\n                        \"current\": 1,\n                        \"type\": \"number\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Comparison and Adjustment\",\n                      \"points\": [\n                        \"If the middle element is equal to the target, its index is returned\",\n                        \"If the middle element is less than the target, the search range is updated to the right half\",\n                        \"If the middle element is greater than the target, the search range is updated to the left half\"\n                      ],\n                      \"focus\": \"Narrowing down the search range based on comparison\"\n                    }\n                  }\n                ]\n              },\n              {\n                \"name\": \"Return Result\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Return -1 if Target not Found\",\n                    \"code\": [\n                      \"return -1\"\n                    ],\n                    \"variables\": [],\n                    \"conceptDetails\": {\n                      \"title\": \"Target Not Found\",\n                      \"points\": [\n                        \"If the target element is not found in the array, -1 is returned\",\n                        \"This indicates the element is not present in the sorted array\"\n                      ],\n                      \"focus\": \"Handling the case when the target is not found\"\n                    }\n                  }\n                ]\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}\n```",
+  "parsedJson": {
+    "feature": {
+      "name": "Binary Search",
+      "description": "An efficient algorithm for finding an element in a sorted array.",
+      "source": "https://en.wikipedia.org/wiki/Binary_search_algorithm",
+      "categories": {
+        "Searching Algorithms": {
+          "scenarios": [
+            "Find an element in a sorted array"
+          ],
+          "complexity": "O(log n)"
+        }
+      },
+      "flows": [
+        {
+          "name": "Basic Binary Search",
+          "complexity": "O(log n)",
+          "time": "Logarithmic time",
+          "prerequisites": "The array must be sorted"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Search Element in Sorted Array",
+          "description": "Find the index of a target element in a sorted array using binary search.",
+          "tag": "searching",
+          "steps": [
+            {
+              "name": "Binary Search",
+              "entryPoint": "binarySearch(arr, target)",
+              "sections": [
+                {
+                  "name": "Initialize Pointers",
+                  "codeBlocks": [
+                    {
+                      "name": "Initialize Left and Right Pointers",
+                      "code": [
+                        "let left = 0",
+                        "let right = arr.length - 1"
+                      ],
+                      "variables": [
+                        {
+                          "name": "left",
+                          "previous": null,
+                          "current": 0,
+                          "type": "number",
+                          "important": true
+                        },
+                        {
+                          "name": "right",
+                          "previous": null,
+                          "current": 4,
+                          "type": "number",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pointers",
+                        "points": [
+                          "Left pointer represents the start index",
+                          "Right pointer represents the end index"
+                        ],
+                        "focus": "Setting the initial search range"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Search Loop",
+                  "codeBlocks": [
+                    {
+                      "name": "Loop Condition",
+                      "code": [
+                        "while (left <= right) {"
+                      ],
+                      "variables": [
+                        {
+                          "name": "left",
+                          "previous": 0,
+                          "current": 0,
+                          "type": "number",
+                          "important": true
+                        },
+                        {
+                          "name": "right",
+                          "previous": 4,
+                          "current": 4,
+                          "type": "number",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Loop Condition",
+                        "points": [
+                          "The loop continues as long as the left pointer is less than or equal to the right pointer",
+                          "This ensures the search range is valid"
+                        ],
+                        "focus": "Terminating condition for the search"
+                      }
+                    },
+                    {
+                      "name": "Calculate Middle Index",
+                      "code": [
+                        "let mid = Math.floor((left + right) / 2)"
+                      ],
+                      "variables": [
+                        {
+                          "name": "mid",
+                          "previous": null,
+                          "current": 2,
+                          "type": "number",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Middle Index",
+                        "points": [
+                          "The middle index is calculated as the average of the left and right pointers",
+                          "Math.floor ensures the middle index is an integer"
+                        ],
+                        "focus": "Calculating the middle index for comparison"
+                      }
+                    },
+                    {
+                      "name": "Compare Target with Middle Element",
+                      "code": [
+                        "if (arr[mid] === target) {",
+                        "  return mid",
+                        "} else if (arr[mid] < target) {",
+                        "  left = mid + 1",
+                        "} else {",
+                        "  right = mid - 1",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "target",
+                          "previous": 4,
+                          "current": 4,
+                          "type": "number",
+                          "important": true
+                        },
+                        {
+                          "name": "arr[mid]",
+                          "previous": null,
+                          "current": 3,
+                          "type": "number",
+                          "important": true
+                        },
+                        {
+                          "name": "left",
+                          "previous": 0,
+                          "current": 3,
+                          "type": "number",
+                          "important": true
+                        },
+                        {
+                          "name": "right",
+                          "previous": 4,
+                          "current": 1,
+                          "type": "number",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Comparison and Adjustment",
+                        "points": [
+                          "If the middle element is equal to the target, its index is returned",
+                          "If the middle element is less than the target, the search range is updated to the right half",
+                          "If the middle element is greater than the target, the search range is updated to the left half"
+                        ],
+                        "focus": "Narrowing down the search range based on comparison"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Return Result",
+                  "codeBlocks": [
+                    {
+                      "name": "Return -1 if Target not Found",
+                      "code": [
+                        "return -1"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Target Not Found",
+                        "points": [
+                          "If the target element is not found in the array, -1 is returned",
+                          "This indicates the element is not present in the sorted array"
+                        ],
+                        "focus": "Handling the case when the target is not found"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

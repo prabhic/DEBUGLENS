@@ -1,0 +1,327 @@
+{
+  "timestamp": "2024-11-10T16:58:55.023Z",
+  "prompt": "Explain Kubernetes Pod Deployment What happens internally when you deploy a new pod to Kubernetes?",
+  "response": {
+    "feature": {
+      "name": "Kubernetes Pod Deployment",
+      "description": "Kubernetes orchestrates the deployment, management, and scaling of containerized applications by scheduling containers onto a cluster of nodes. One of the core primitives is the Pod, which represents one or more containers that share storage and network resources. This feature explains the internal process when deploying a new Pod in Kubernetes.",
+      "source": "Kubernetes is an open-source container orchestration system originally developed by Google and now maintained by the Cloud Native Computing Foundation.",
+      "categories": {
+        "PodLifecycle": {
+          "scenarios": [
+            "DeployNewPod"
+          ],
+          "complexity": "Advanced"
+        }
+      },
+      "flows": [
+        {
+          "name": "Debug Pod Deployment",
+          "complexity": "Advanced",
+          "time": "20 mins",
+          "prerequisites": "Understanding of Kubernetes architecture, API server, schedulers, kubelet"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "DeployNewPod",
+          "description": "Walkthrough of how Kubernetes handles deploying a new Pod onto the cluster",
+          "tag": "PodLifecycle",
+          "steps": [
+            {
+              "name": "Submit Deployment Request",
+              "entryPoint": "The user submits a request to deploy a new Pod by sending the Pod specification to the Kubernetes API server.",
+              "sections": [
+                {
+                  "name": "API Request Handling",
+                  "codeBlocks": [
+                    {
+                      "name": "HandleDeploymentRequest",
+                      "code": [
+                        "func handleDeploymentRequest(podSpec PodSpec) error {",
+                        "  // Validate pod spec",
+                        "  if err := validation.ValidatePodSpec(podSpec); err != nil {",
+                        "    return err",
+                        "  }",
+                        "  // Create new unbound pod in etcd",
+                        "  newPod := &api.Pod{Spec: podSpec, Status: api.PodStatus{Phase: api.PodPending}}",
+                        "  if err := storage.EtcdClient.CreatePod(newPod); err != nil {",
+                        "    return err",
+                        "  }",
+                        "  // Notify scheduler of new unbound pod",
+                        "  scheduler.HandleNewPod(newPod)",
+                        "  return nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podSpec",
+                          "current": "PodSpec{Containers: [{Name: \"web\", Image: \"nginx\"}]}",
+                          "type": "PodSpec",
+                          "important": true
+                        },
+                        {
+                          "name": "newPod",
+                          "current": "&api.Pod{Spec: PodSpec{...}, Status: api.PodStatus{Phase: api.PodPending}}",
+                          "type": "*api.Pod",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "API Request Handling",
+                        "points": [
+                          "The Kubernetes API server handles requests to create, modify, or delete Kubernetes objects like Pods",
+                          "It validates the request data and persists new objects to the etcd distributed key-value store",
+                          "The new unbound Pod object is created in the Pending phase and the scheduler is notified"
+                        ],
+                        "focus": "Understanding how the API server processes Pod deployment requests and creates new Pod objects"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Schedule Pod to Node",
+              "sections": [
+                {
+                  "name": "Pod Scheduling",
+                  "codeBlocks": [
+                    {
+                      "name": "SchedulePod",
+                      "code": [
+                        "func (s *scheduler) SchedulePod(pod *api.Pod) error {",
+                        "  // Get list of feasible nodes for pod",
+                        "  nodes, err := s.nodeLister.List(labels.Everything())",
+                        "  if err != nil {",
+                        "    return err",
+                        "  }",
+                        "  // Run filter plugins to find feasible nodes",
+                        "  feasibleNodes, err := s.filterNodes(pod, nodes)",
+                        "  if err != nil {",
+                        "    return err",
+                        "  }",
+                        "  // Run scoring plugins to rank nodes",
+                        "  scoredNodes := s.prioritizeNodes(pod, feasibleNodes)",
+                        "  // Assign pod to highest ranked node",
+                        "  node := scoredNodes[0].Node",
+                        "  s.bindPodToNode(pod, node)",
+                        "  return nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "nodes",
+                          "current": "[node1, node2, node3]",
+                          "type": "[]*api.Node",
+                          "important": false
+                        },
+                        {
+                          "name": "feasibleNodes",
+                          "current": "[node2, node3]",
+                          "type": "[]*api.Node",
+                          "important": false
+                        },
+                        {
+                          "name": "scoredNodes",
+                          "current": "[{Node: node3, Score: 90}, {Node: node2, Score: 80}]",
+                          "type": "[]NodeScore",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pod Scheduling",
+                        "points": [
+                          "The scheduler finds feasible nodes for the Pod by running filter plugins",
+                          "It then ranks the feasible nodes using scoring plugins based on resource availability, affinity/anti-affinity rules, etc.",
+                          "The Pod is bound to the highest ranked node that meets its requirements"
+                        ],
+                        "focus": "Understanding how the scheduler finds the best node to place the Pod on based on its requirements and resource availability"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Launch Pod on Node",
+              "sections": [
+                {
+                  "name": "Kubelet Pod Management",
+                  "codeBlocks": [
+                    {
+                      "name": "CreatePodSandbox",
+                      "code": [
+                        "func (kl *kubelet) CreatePodSandbox(pod *api.Pod) (*runtimeapi.PodSandboxConfig, error) {",
+                        "  config := &runtimeapi.PodSandboxConfig{",
+                        "    Metadata: &runtimeapi.PodSandboxMetadata{",
+                        "      Name:      pod.Name,",
+                        "      Namespace: pod.Namespace,",
+                        "    },",
+                        "    // ... Other sandbox config ...",
+                        "  }",
+                        "  podSandBoxId, err := kl.runtime.RunPodSandbox(config)",
+                        "  if err != nil {",
+                        "    return nil, err",
+                        "  }",
+                        "  return config, nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podSandboxId",
+                          "current": "ed7c7a7d9e7aa1ff7f7aa1ff7f7a1ff7f7aa1ff7f7aa1ff7",
+                          "type": "string",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pod Sandbox",
+                        "points": [
+                          "The kubelet creates a 'pod sandbox' which provides the cgroups, namespaces and filesystem isolations for Pods",
+                          "It leverages the configured container runtime (e.g. Docker, containerd) to create the sandbox",
+                          "The sandbox ID is used to track and manage the containers within the Pod"
+                        ],
+                        "focus": "Understanding the concept of a Pod sandbox and how it isolates a Pod's resources"
+                      }
+                    },
+                    {
+                      "name": "CreateContainers",
+                      "code": [
+                        "func (kl *kubelet) CreateContainers(pod *api.Pod, podSandboxId string) error {",
+                        "  for _, container := range pod.Spec.Containers {",
+                        "    config := &runtimeapi.ContainerConfig{",
+                        "      Metadata: &runtimeapi.ContainerMetadata{",
+                        "        Name: container.Name,",
+                        "      },",
+                        "      Image: &runtimeapi.ImageSpec{Image: container.Image},",
+                        "      // ... Other container config ...",
+                        "    }",
+                        "    if _, err := kl.runtime.CreateContainer(podSandboxId, config); err != nil {",
+                        "      return err",
+                        "    }",
+                        "  }",
+                        "  return nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podSandboxId",
+                          "previous": "ed7c7a7d9e7aa1ff7f7aa1ff7f7a1ff7f7aa1ff7f7aa1ff7",
+                          "current": "ed7c7a7d9e7aa1ff7f7aa1ff7f7a1ff7f7aa1ff7f7aa1ff7",
+                          "type": "string",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Container Creation",
+                        "points": [
+                          "The kubelet uses the container runtime to create containers within the Pod's sandbox",
+                          "It creates one container for each container spec defined in the Pod manifest",
+                          "The containers share the sandbox's cgroups, namespaces and other isolation primitives"
+                        ],
+                        "focus": "How containers are created within an existing Pod sandbox using the container runtime"
+                      }
+                    },
+                    {
+                      "name": "StartContainers",
+                      "code": [
+                        "func (kl *kubelet) StartContainers(podSandboxId string) error {",
+                        "  containerId, err := kl.runtime.StartContainer(podSandboxId)",
+                        "  if err != nil {",
+                        "    return err",
+                        "  }",
+                        "  // Wait for containers to start",
+                        "  err = kl.containerStarted(containerId)",
+                        "  if err != nil {",
+                        "    return err",
+                        "  }",
+                        "  return nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podSandboxId",
+                          "previous": "ed7c7a7d9e7aa1ff7f7aa1ff7f7a1ff7f7aa1ff7f7aa1ff7",
+                          "current": "ed7c7a7d9e7aa1ff7f7aa1ff7f7a1ff7f7aa1ff7f7aa1ff7",
+                          "type": "string",
+                          "important": true
+                        },
+                        {
+                          "name": "containerId",
+                          "current": "1ab7c9e7aa1ff7f7aa1ff7f7a1ff7f7aa1ff7f7aa1ff7",
+                          "type": "string",
+                          "important": false
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Container Startup",
+                        "points": [
+                          "After creating the containers, the kubelet instructs the runtime to start them",
+                          "It waits for the containers to transition to the 'Started' state before continuing",
+                          "Once all containers are started, the Pod is marked as Running"
+                        ],
+                        "focus": "The final steps to start the containers within the Pod sandbox and transition the Pod to the Running phase"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Update Pod Status",
+              "sections": [
+                {
+                  "name": "Status Updates",
+                  "codeBlocks": [
+                    {
+                      "name": "UpdatePodStatus",
+                      "code": [
+                        "func (kl *kubelet) UpdatePodStatus(pod *api.Pod) error {",
+                        "  // Update Pod condition",
+                        "  podCondition := api.PodCondition{",
+                        "    Type:   api.PodReady,",
+                        "    Status: api.ConditionTrue,",
+                        "  }",
+                        "  pod.Status.Conditions = []api.PodCondition{podCondition}",
+                        "  // Update Pod phase",
+                        "  pod.Status.Phase = api.PodRunning",
+                        "  // Update Pod IP",
+                        "  pod.Status.PodIP = kl.getPodIP(pod)",
+                        "  // Push status update to API server",
+                        "  if _, err := kl.kubeClient.Core().Pods(pod.Namespace).UpdateStatus(pod); err != nil {",
+                        "    return err",
+                        "  }",
+                        "  return nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "pod.Status",
+                          "previous": "{Phase: PodPending, Conditions: null}",
+                          "current": "{Phase: PodRunning, Conditions: [{Type: PodReady, Status: True}], PodIP: 10.244.3.4}",
+                          "type": "api.PodStatus",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pod Status Management",
+                        "points": [
+                          "The kubelet updates the Pod's status after containers are running",
+                          "It sets the Pod phase to Running and the condition to True",
+                          "It also updates the Pod's IP address assigned by the cluster network",
+                          "The updated status is sent to the API server for persistence"
+                        ],
+                        "focus": "Understand how the kubelet manages and updates a Pod's status throughout its lifecycle"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

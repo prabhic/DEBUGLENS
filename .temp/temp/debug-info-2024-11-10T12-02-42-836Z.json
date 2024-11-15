@@ -1,0 +1,100 @@
+{
+  "timestamp": "2024-11-10T12:02:42.838Z",
+  "prompt": "how does linux switch process",
+  "fullResponse": "```json\n{\n  \"feature\": {\n    \"name\": \"Linux Process Switching\",\n    \"description\": \"An explanation of how Linux switches between processes\",\n    \"source\": \"Operating System Concepts by Silberschatz et al.\",\n    \"categories\": {\n      \"Operating Systems\": {\n        \"scenarios\": [\n          \"Process management\",\n          \"Scheduling\"\n        ],\n        \"complexity\": \"Intermediate\"\n      }\n    },\n    \"flows\": [\n      {\n        \"name\": \"Process Switching Cycle\",\n        \"complexity\": \"Intermediate\",\n        \"time\": \"10-15 minutes\",\n        \"prerequisites\": \"Basic understanding of processes and scheduling\"\n      }\n    ],\n    \"scenarios\": [\n      {\n        \"name\": \"Context Switching\",\n        \"description\": \"How Linux switches between processes\",\n        \"tag\": \"Process management\",\n        \"steps\": [\n          {\n            \"name\": \"Process Switching Overview\",\n            \"entryPoint\": \"main.c\",\n            \"sections\": [\n              {\n                \"name\": \"Introduction\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Process Switching\",\n                    \"code\": [\n                      \"/* Linux uses a process scheduling algorithm to switch between processes */\",\n                      \"/* This is known as context switching */\"\n                    ],\n                    \"variables\": [],\n                    \"conceptDetails\": {\n                      \"title\": \"Context Switching\",\n                      \"points\": [\n                        \"Switching the CPU from one process to another\",\n                        \"Involves saving and restoring process state\"\n                      ],\n                      \"focus\": \"Understanding the high-level concept of context switching\"\n                    }\n                  }\n                ]\n              },\n              {\n                \"name\": \"Process State\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Process Control Block\",\n                    \"code\": [\n                      \"typedef struct {\",\n                      \"    int pid; /* Process ID */\",\n                      \"    int state; /* Process state */\",\n                      \"    /* Other process information */\",\n                      \"} pcb_t;\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"pcb\",\n                        \"previous\": null,\n                        \"current\": {\n                          \"pid\": 1234,\n                          \"state\": \"RUNNING\"\n                        },\n                        \"type\": \"pcb_t\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Process Control Block\",\n                      \"points\": [\n                        \"Data structure that stores process information\",\n                        \"Contains process state, registers, and other metadata\"\n                      ],\n                      \"focus\": \"Understanding the role of the PCB in context switching\"\n                    }\n                  }\n                ]\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}\n```\n\nThis JSON output provides a detailed structure for explaining the concept of how Linux switches between processes. It includes an overview of context switching, a description of the process control block (PCB) data structure, and placeholders for additional code blocks and variable state changes to be added as the explanation progresses.",
+  "parsedJson": {
+    "feature": {
+      "name": "Linux Process Switching",
+      "description": "An explanation of how Linux switches between processes",
+      "source": "Operating System Concepts by Silberschatz et al.",
+      "categories": {
+        "Operating Systems": {
+          "scenarios": [
+            "Process management",
+            "Scheduling"
+          ],
+          "complexity": "Intermediate"
+        }
+      },
+      "flows": [
+        {
+          "name": "Process Switching Cycle",
+          "complexity": "Intermediate",
+          "time": "10-15 minutes",
+          "prerequisites": "Basic understanding of processes and scheduling"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Context Switching",
+          "description": "How Linux switches between processes",
+          "tag": "Process management",
+          "steps": [
+            {
+              "name": "Process Switching Overview",
+              "entryPoint": "main.c",
+              "sections": [
+                {
+                  "name": "Introduction",
+                  "codeBlocks": [
+                    {
+                      "name": "Process Switching",
+                      "code": [
+                        "/* Linux uses a process scheduling algorithm to switch between processes */",
+                        "/* This is known as context switching */"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Context Switching",
+                        "points": [
+                          "Switching the CPU from one process to another",
+                          "Involves saving and restoring process state"
+                        ],
+                        "focus": "Understanding the high-level concept of context switching"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Process State",
+                  "codeBlocks": [
+                    {
+                      "name": "Process Control Block",
+                      "code": [
+                        "typedef struct {",
+                        "    int pid; /* Process ID */",
+                        "    int state; /* Process state */",
+                        "    /* Other process information */",
+                        "} pcb_t;"
+                      ],
+                      "variables": [
+                        {
+                          "name": "pcb",
+                          "previous": null,
+                          "current": {
+                            "pid": 1234,
+                            "state": "RUNNING"
+                          },
+                          "type": "pcb_t",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Process Control Block",
+                        "points": [
+                          "Data structure that stores process information",
+                          "Contains process state, registers, and other metadata"
+                        ],
+                        "focus": "Understanding the role of the PCB in context switching"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,198 @@
+{
+  "timestamp": "2024-11-10T19:22:28.051Z",
+  "prompt": "Explain Redis Data Storage What happens internally when Redis stores and retrieves data?",
+  "response": {
+    "feature": {
+      "name": "Redis Data Storage",
+      "description": "Redis is an open-source, in-memory data structure store used as a database, cache, and message broker. This feature explains how Redis internally stores and retrieves data using its data structures and algorithms.",
+      "source": "Redis is written in C and uses custom data structures and algorithms optimized for performance and memory efficiency.",
+      "categories": {
+        "BasicDataStructures": {
+          "scenarios": [
+            "Simple Key-Value Storage"
+          ],
+          "complexity": "Basic"
+        },
+        "AdvancedDataStructures": {
+          "scenarios": [
+            "Redis List",
+            "Redis Hashes",
+            "Redis Sets",
+            "Redis Sorted Sets"
+          ],
+          "complexity": "Advanced"
+        },
+        "Persistence": {
+          "scenarios": [
+            "Redis Snapshots",
+            "Redis AOF Persistence"
+          ],
+          "complexity": "Expert"
+        }
+      },
+      "flows": [
+        {
+          "name": "Simple Key-Value Storage",
+          "complexity": "Basic",
+          "time": "10 mins",
+          "prerequisites": "Understanding of basic data structures like strings, hashes/dictionaries"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Simple Key-Value Storage",
+          "description": "This scenario walks through how Redis stores and retrieves simple key-value pairs using strings as the data type.",
+          "tag": "BasicScenario",
+          "steps": [
+            {
+              "name": "Redis Data Model",
+              "entryPoint": "Redis stores all data in its in-memory dataset called a 'redis.h/redisObject'.",
+              "sections": [
+                {
+                  "name": "Redis Object Structure",
+                  "codeBlocks": [
+                    {
+                      "name": "redisObject",
+                      "code": [
+                        "typedef struct redisObject {",
+                        "    unsigned type:4;",
+                        "    unsigned encoding:4;",
+                        "    unsigned lru:REDIS_LRU_BITS; /* lru time (relative to server.lruclock) */",
+                        "    int refcount;",
+                        "    void *ptr;",
+                        "} robj;"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Redis Object",
+                        "points": [
+                          "Core data structure that holds a Redis value",
+                          "type indicates the kind of value (string, list, set, etc.)",
+                          "encoding indicates representation of data (int, raw bytes)",
+                          "lru tracks access time for cache eviction policies",
+                          "refcount tracks number of references to this object",
+                          "ptr points to the actual data payload"
+                        ],
+                        "focus": "Understanding the core in-memory data structure"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "String Object Encoding",
+                  "codeBlocks": [
+                    {
+                      "name": "StringObject",
+                      "code": [
+                        "typedef struct redis_string {",
+                        "    unsigned int len; /* string length */",
+                        "    char buf[]; /* string data */",
+                        "} redis_string_t;"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "String Encoding",
+                        "points": [
+                          "For string values, Redis uses a simple len+buf structure",
+                          "len stores the length of the string data",
+                          "buf holds the actual string bytes"
+                        ],
+                        "focus": "How Redis represents string values internally"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "SET Operation",
+              "sections": [
+                {
+                  "name": "Creating New Key",
+                  "codeBlocks": [
+                    {
+                      "name": "setKey",
+                      "code": [
+                        "robj *createObject(char *value, size_t len) {",
+                        "    redis_string_t *string = createRawStringObject(value, len);",
+                        "    return createObject(REDIS_STRING, string);",
+                        "}",
+                        "",
+                        "int setKey(redisDb *db, robj *key, robj *val) {",
+                        "    dictEntry *entry = dictAddOrFind(db->dict, key->ptr);",
+                        "    dictSetKey(db->dict, entry, key);",
+                        "    dictSetVal(db->dict, entry, val);",
+                        "    return REDIS_OK;",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "db->dict",
+                          "previous": "N/A",
+                          "current": "{key1: val1, key2: val2}",
+                          "type": "dict (hash table)",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "SET Key Operation",
+                        "points": [
+                          "Redis database is a dict (hash table) mapping keys to values",
+                          "createObject() creates a new Redis Object from input data",
+                          "setKey() adds/updates the key->value mapping in the dict"
+                        ],
+                        "focus": "How new key-value pairs are added to Redis"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "GET Operation",
+              "sections": [
+                {
+                  "name": "Retrieving Value",
+                  "codeBlocks": [
+                    {
+                      "name": "getKey",
+                      "code": [
+                        "robj *getKey(redisDb *db, robj *key) {",
+                        "    dictEntry *entry = dictFind(db->dict, key->ptr);",
+                        "    if (entry) {",
+                        "        robj *val = dictGetVal(entry);",
+                        "        return val;",
+                        "    } else {",
+                        "        return NULL; // Key not found",
+                        "    }",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "db->dict",
+                          "previous": "{key1: val1, key2: val2}",
+                          "current": "{key1: val1, key2: val2}",
+                          "type": "dict",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "GET Key Operation",
+                        "points": [
+                          "dictFind looks up the key in the dict",
+                          "If found, dictGetVal retrieves the value object",
+                          "Else, it returns NULL for a missing key"
+                        ],
+                        "focus": "How values are retrieved from Redis for a given key"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

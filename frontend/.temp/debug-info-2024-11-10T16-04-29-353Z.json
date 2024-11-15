@@ -1,0 +1,183 @@
+{
+  "timestamp": "2024-11-10T16:04:29.358Z",
+  "prompt": "Explain How Linux Kernel Core switch a process",
+  "response": {
+    "feature": {
+      "name": "Linux Kernel Process Scheduling",
+      "description": "The Linux kernel uses a process scheduler to efficiently manage the execution of processes on the system. The scheduler decides which process should be running at any given time, and handles switching between processes to ensure fair allocation of CPU resources and optimal system performance.",
+      "source": "Linux Kernel Source Code (kernel/sched/)",
+      "categories": {
+        "CoreSchedulingMechanisms": {
+          "scenarios": [
+            "Process Scheduling Algorithm",
+            "Context Switching Implementation"
+          ],
+          "complexity": "Advanced"
+        },
+        "DataStructures": {
+          "scenarios": [
+            "Process Descriptor Management",
+            "Run Queue Implementation"
+          ],
+          "complexity": "Expert"
+        }
+      },
+      "flows": [
+        {
+          "name": "Context Switching Implementation",
+          "complexity": "Advanced",
+          "time": "20 mins",
+          "prerequisites": "Understanding of process scheduling concepts, kernel data structures"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Context Switching Implementation",
+          "description": "Explore how the Linux kernel implements the context switching mechanism to switch between processes efficiently.",
+          "tag": "CoreSchedulingMechanisms",
+          "steps": [
+            {
+              "name": "Process Descriptor",
+              "entryPoint": "The process descriptor (task_struct) is a core data structure in the Linux kernel that represents a process.",
+              "sections": [
+                {
+                  "name": "task_struct Definition",
+                  "codeBlocks": [
+                    {
+                      "name": "task_struct",
+                      "code": [
+                        "struct task_struct {",
+                        "  /* Process credentials */",
+                        "  const struct cred __rcu *ptracer_cred; /* Credentials for tracing */",
+                        "  const struct cred __rcu *real_cred; /* Effective credentials */",
+                        "  ...",
+                        "  /* Process scheduling info */",
+                        "  struct sched_entity se;",
+                        "  struct sched_rt_entity rt;",
+                        "  ...",
+                        "  /* CPU-specific state */",
+                        "  struct thread_struct thread;",
+                        "  ...",
+                        "};"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Process Descriptor",
+                        "points": [
+                          "Represents a process in the kernel",
+                          "Contains process credentials, scheduling information, CPU state, and more",
+                          "Accessed and modified by various kernel subsystems"
+                        ],
+                        "focus": "Understanding the core data structure that represents a process"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Context Switching",
+                  "codeBlocks": [
+                    {
+                      "name": "switch_to",
+                      "code": [
+                        "void switch_to(struct task_struct *prev, struct task_struct *next) {",
+                        "  /* Save the CPU state of the previous task */",
+                        "  __switch_to_auxm(prev, next);",
+                        "",
+                        "  /* Load the CPU state of the next task */",
+                        "  __switch_to_auxs(prev, next);",
+                        "",
+                        "  /* Update task scheduling information */",
+                        "  rq->curr = next;",
+                        "  ...",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "prev",
+                          "previous": "Current running process",
+                          "current": "Current running process",
+                          "type": "struct task_struct *",
+                          "important": true
+                        },
+                        {
+                          "name": "next",
+                          "previous": "Next process to run",
+                          "current": "Next process to run",
+                          "type": "struct task_struct *",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Context Switching",
+                        "points": [
+                          "Saves the CPU state of the previous process",
+                          "Loads the CPU state of the next process",
+                          "Updates scheduling information for the run queue"
+                        ],
+                        "focus": "Understanding the core function that performs the context switch"
+                      }
+                    },
+                    {
+                      "name": "__switch_to_auxm",
+                      "code": [
+                        "void __switch_to_auxm(struct task_struct *prev, struct task_struct *next) {",
+                        "  /* Save the CPU state of the previous task */",
+                        "  save_auxm(prev);",
+                        "  ...",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "prev",
+                          "previous": "Current running process",
+                          "current": "Current running process",
+                          "type": "struct task_struct *",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Saving CPU State",
+                        "points": [
+                          "Saves the CPU state of the previous process",
+                          "Includes registers, FPU state, and other architecture-specific state"
+                        ],
+                        "focus": "Understanding how the CPU state is saved during context switching"
+                      }
+                    },
+                    {
+                      "name": "__switch_to_auxs",
+                      "code": [
+                        "void __switch_to_auxs(struct task_struct *prev, struct task_struct *next) {",
+                        "  /* Load the CPU state of the next task */",
+                        "  load_auxm(next);",
+                        "  ...",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "next",
+                          "previous": "Next process to run",
+                          "current": "Next process to run",
+                          "type": "struct task_struct *",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Loading CPU State",
+                        "points": [
+                          "Loads the CPU state of the next process",
+                          "Includes registers, FPU state, and other architecture-specific state"
+                        ],
+                        "focus": "Understanding how the CPU state is loaded during context switching"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

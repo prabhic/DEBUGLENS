@@ -1,0 +1,363 @@
+{
+  "timestamp": "2024-11-10T17:34:30.703Z",
+  "prompt": "Explain Kubernetes Pod Deployment What happens internally when you deploy a new pod to Kubernetes?",
+  "response": {
+    "feature": {
+      "name": "Kubernetes Pod Deployment",
+      "description": "The process of deploying a new pod to a Kubernetes cluster, which involves creating the pod, scheduling it to a node, pulling container images, and running the containers.",
+      "source": "Kubernetes is an open-source container orchestration system for automating deployment, scaling, and management of containerized applications.",
+      "categories": {
+        "Scheduling": {
+          "scenarios": [
+            "Basic Pod Scheduling"
+          ],
+          "complexity": "Basic"
+        },
+        "Networking": {
+          "scenarios": [
+            "Pod Network Setup"
+          ],
+          "complexity": "Advanced"
+        },
+        "Storage": {
+          "scenarios": [
+            "Volume Mounting"
+          ],
+          "complexity": "Expert"
+        }
+      },
+      "flows": [
+        {
+          "name": "Basic Pod Deployment",
+          "complexity": "Basic",
+          "time": "10 mins",
+          "prerequisites": "Understanding of Kubernetes API primitives like Pods, Nodes, etc."
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Basic Pod Scheduling",
+          "description": "A basic scenario that walks through the scheduling of a new pod on an available node in the cluster.",
+          "tag": "BasicScenario",
+          "steps": [
+            {
+              "name": "User creates Pod",
+              "sections": [
+                {
+                  "name": "Create Pod API Request",
+                  "codeBlocks": [
+                    {
+                      "name": "kubectl_create_pod",
+                      "code": [
+                        "kubectl create -f pod.yaml"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Kubernetes API",
+                        "points": [
+                          "Provides declarative way to create/update resources",
+                          "Clients like kubectl send API requests to kube-apiserver"
+                        ],
+                        "focus": "Understanding the role of the API server"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "API Server handles request",
+              "sections": [
+                {
+                  "name": "Admission Control",
+                  "codeBlocks": [
+                    {
+                      "name": "admission_control",
+                      "code": [
+                        "// Admission control enforces policies",
+                        "err := admissionControl.Validate(pod)",
+                        "if err != nil {",
+                        "    return err",
+                        "}"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Admission Control",
+                        "points": [
+                          "Enforces policies and validations on API requests",
+                          "Protects cluster against malicious or misconfigured pods"
+                        ],
+                        "focus": "Understanding policy enforcement"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Create Pod in etcd",
+                  "codeBlocks": [
+                    {
+                      "name": "create_pod_object",
+                      "code": [
+                        "// Create pod object in etcd",
+                        "podKey := \"/registry/pods/default/\" + string(pod.UID)",
+                        "err := etcdClient.Create(podKey, pod)"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podKey",
+                          "current": "\"/registry/pods/default/\" + pod.UID",
+                          "type": "string",
+                          "important": true
+                        },
+                        {
+                          "name": "pod",
+                          "current": "Pod API object",
+                          "type": "api.Pod",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "etcd Datastore",
+                        "points": [
+                          "Distributed key-value store used to store cluster data",
+                          "Highly available and consistent"
+                        ],
+                        "focus": "Understanding persistent pod storage"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Scheduler assigns pod to node",
+              "sections": [
+                {
+                  "name": "Filter Nodes",
+                  "codeBlocks": [
+                    {
+                      "name": "filter_nodes",
+                      "code": [
+                        "// Filter nodes based on predicates",
+                        "nodes := nodeCache.list()",
+                        "filtered := []Node{}",
+                        "for _, node := range nodes {",
+                        "    if podFitsOnNode(pod, node) {",
+                        "        filtered = append(filtered, node)",
+                        "    }",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "nodes",
+                          "current": "List of all nodes in cluster",
+                          "type": "[]Node",
+                          "important": false
+                        },
+                        {
+                          "name": "filtered",
+                          "current": "Filtered list of nodes that can host the pod",
+                          "type": "[]Node",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Node Filtering",
+                        "points": [
+                          "Scheduler filters nodes based on predicates",
+                          "Predicates check node resource availability, selectors etc."
+                        ],
+                        "focus": "Understanding scheduling constraints"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Prioritize Nodes",
+                  "codeBlocks": [
+                    {
+                      "name": "prioritize_nodes",
+                      "code": [
+                        "// Prioritize filtered nodes",
+                        "priorityList := prioritizers.Score(filtered, pod)",
+                        "host := priorityList[0].Node"
+                      ],
+                      "variables": [
+                        {
+                          "name": "priorityList",
+                          "current": "Sorted list of nodes with priority scores",
+                          "type": "PriorityList",
+                          "important": true
+                        },
+                        {
+                          "name": "host",
+                          "current": "The highest priority node to host the pod",
+                          "type": "Node",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Node Prioritization",
+                        "points": [
+                          "Scheduler prioritizes nodes based on priority functions",
+                          "Considers factors like resource usage, affinity etc."
+                        ],
+                        "focus": "Understanding node scoring and selection"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Bind Pod to Node",
+                  "codeBlocks": [
+                    {
+                      "name": "bind_pod",
+                      "code": [
+                        "// Bind pod to the selected host",
+                        "err := bindPodToNode(pod, host)",
+                        "if err != nil {",
+                        "    return err",
+                        "}"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Pod Binding",
+                        "points": [
+                          "Scheduler updates the pod with the selected node name",
+                          "This binding is recorded in etcd for the kubelet to read"
+                        ],
+                        "focus": "Understanding pod-to-node binding"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Kubelet runs pod on node",
+              "entryPoint": "The kubelet on each node watches the API server for new pods assigned to its node.",
+              "sections": [
+                {
+                  "name": "Create Pod Sandbox",
+                  "codeBlocks": [
+                    {
+                      "name": "create_podsandbox",
+                      "code": [
+                        "// Create a pod sandbox (e.g. container runtime namespace)",
+                        "podSandboxId, err := m.RuntimeService.RunPodSandbox(config)"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podSandboxId",
+                          "current": "Unique identifier for the new pod sandbox",
+                          "type": "string",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pod Sandbox",
+                        "points": [
+                          "Lightweight namespace/environment to run containers",
+                          "Managed by the container runtime (e.g. Docker, containerd)"
+                        ],
+                        "focus": "Understanding container isolation primitives"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Pull Container Images",
+                  "codeBlocks": [
+                    {
+                      "name": "pull_images",
+                      "code": [
+                        "// Pull required container images",
+                        "for _, container := range podSpec.Containers {",
+                        "    image := container.Image",
+                        "    resp, err := m.ImageService.PullImage(image, nil)",
+                        "    if err != nil {",
+                        "        handleErr(err)",
+                        "    }",
+                        "}"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Container Image Registry",
+                        "points": [
+                          "Container images are pulled from a registry",
+                          "Public registries like Docker Hub, private registries etc."
+                        ],
+                        "focus": "Understanding image distribution"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Create Containers",
+                  "codeBlocks": [
+                    {
+                      "name": "create_containers",
+                      "code": [
+                        "// Create containers in the pod sandbox",
+                        "for _, container := range podSpec.Containers {",
+                        "    containerid, err := m.RuntimeService.CreateContainer(",
+                        "        podSandboxId, containerConfig, podSandboxConfig)",
+                        "    if err != nil {",
+                        "        handleErr(err)",
+                        "    }",
+                        "    containerStatuses = append(containerStatuses, containerid)",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "containerStatuses",
+                          "current": "List of created container IDs",
+                          "type": "[]string",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Container Creation",
+                        "points": [
+                          "Containers are created in the pod sandbox namespace",
+                          "Container configs like image, resources etc. are applied"
+                        ],
+                        "focus": "Understanding container instantiation"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Start Containers",
+                  "codeBlocks": [
+                    {
+                      "name": "start_containers",
+                      "code": [
+                        "// Start all containers for the pod",
+                        "for _, containerStatus := range containerStatuses {",
+                        "    err := m.RuntimeService.StartContainer(containerStatus)",
+                        "    if err != nil {",
+                        "        handleErr(err)",
+                        "    }",
+                        "}"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Container Startup",
+                        "points": [
+                          "Containers are started by the container runtime",
+                          "Container processes are monitored for health"
+                        ],
+                        "focus": "Understanding container lifecycle"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

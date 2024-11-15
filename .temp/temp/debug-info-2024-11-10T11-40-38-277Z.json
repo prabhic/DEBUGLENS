@@ -1,0 +1,208 @@
+{
+  "timestamp": "2024-11-10T11:40:38.279Z",
+  "prompt": "how does linux switch a process",
+  "fullResponse": "```json\n{\n  \"feature\": {\n    \"name\": \"Web Scraping with Python\",\n    \"description\": \"Extracting data from websites using Python libraries like BeautifulSoup and Scrapy\",\n    \"source\": \"https://realpython.com/python-web-scraping-practical-introduction/\",\n    \"categories\": {\n      \"Web Development\": {\n        \"scenarios\": [\n          \"Scraping data from e-commerce sites\",\n          \"Extracting job listings from career sites\",\n          \"Gathering news articles and blog posts\"\n        ],\n        \"complexity\": \"Intermediate\"\n      },\n      \"Data Analysis\": {\n        \"scenarios\": [\n          \"Collecting data for research projects\",\n          \"Building datasets for machine learning models\"\n        ],\n        \"complexity\": \"Advanced\"\n      }\n    },\n    \"flows\": [\n      {\n        \"name\": \"Basic Web Scraping\",\n        \"complexity\": \"Beginner\",\n        \"time\": \"2 hours\",\n        \"prerequisites\": \"Basic knowledge of Python, HTML, and HTTP requests\"\n      },\n      {\n        \"name\": \"Advanced Web Scraping\",\n        \"complexity\": \"Intermediate\",\n        \"time\": \"6 hours\",\n        \"prerequisites\": \"Understanding of BeautifulSoup, Scrapy, and handling JavaScript-rendered pages\"\n      }\n    ],\n    \"scenarios\": [\n      {\n        \"name\": \"Scraping Product Details from an E-commerce Site\",\n        \"description\": \"Extracting product information like name, price, and description from an online store\",\n        \"tag\": \"Web Scraping\",\n        \"steps\": [\n          {\n            \"name\": \"Setup\",\n            \"entryPoint\": \"main.py\",\n            \"sections\": [\n              {\n                \"name\": \"Importing Libraries\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Import Statements\",\n                    \"code\": [\n                      \"import requests\",\n                      \"from bs4 import BeautifulSoup\"\n                    ],\n                    \"variables\": [],\n                    \"conceptDetails\": {\n                      \"title\": \"Web Scraping Libraries\",\n                      \"points\": [\n                        \"requests library is used for sending HTTP requests\",\n                        \"BeautifulSoup library is used for parsing HTML/XML data\"\n                      ],\n                      \"focus\": \"Understanding the purpose and usage of these libraries\"\n                    }\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"name\": \"Fetching Data\",\n            \"entryPoint\": \"scraper.py\",\n            \"sections\": [\n              {\n                \"name\": \"Sending HTTP Request\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Fetch Product Page\",\n                    \"code\": [\n                      \"url = 'https://example.com/product/123'\",\n                      \"response = requests.get(url)\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"url\",\n                        \"previous\": null,\n                        \"current\": \"'https://example.com/product/123'\",\n                        \"type\": \"string\",\n                        \"important\": true\n                      },\n                      {\n                        \"name\": \"response\",\n                        \"previous\": null,\n                        \"current\": \"<Response [200]>\",\n                        \"type\": \"requests.models.Response\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"HTTP Requests\",\n                      \"points\": [\n                        \"requests.get() sends a GET request to the provided URL\",\n                        \"The response object contains the server's response data\"\n                      ],\n                      \"focus\": \"Understanding how to send HTTP requests and handle responses\"\n                    }\n                  }\n                ]\n              },\n              {\n                \"name\": \"Parsing HTML\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Create BeautifulSoup Object\",\n                    \"code\": [\n                      \"soup = BeautifulSoup(response.content, 'html.parser')\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"soup\",\n                        \"previous\": null,\n                        \"current\": \"<BeautifulSoup object>\",\n                        \"type\": \"bs4.BeautifulSoup\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"HTML Parsing\",\n                      \"points\": [\n                        \"BeautifulSoup parses the HTML content from the response\",\n                        \"The parser 'html.parser' is a Python-based parser\"\n                      ],\n                      \"focus\": \"Understanding how to parse HTML using BeautifulSoup\"\n                    }\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"name\": \"Data Extraction\",\n            \"entryPoint\": \"scraper.py\",\n            \"sections\": [\n              {\n                \"name\": \"Extracting Product Details\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Find Product Name\",\n                    \"code\": [\n                      \"product_name = soup.find('h1', {'class': 'product-title'}).text.strip()\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"product_name\",\n                        \"previous\": null,\n                        \"current\": \"'Example Product'\",\n                        \"type\": \"string\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"HTML Element Selection\",\n                      \"points\": [\n                        \"soup.find() selects the first matching element\",\n                        \"The 'h1' tag with class 'product-title' is selected\",\n                        \"The .text property extracts the text content of the element\"\n                      ],\n                      \"focus\": \"Understanding how to select and extract data from HTML elements\"\n                    }\n                  },\n                  {\n                    \"name\": \"Find Product Price\",\n                    \"code\": [\n                      \"product_price = soup.find('span', {'class': 'product-price'}).text.strip()\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"product_price\",\n                        \"previous\": null,\n                        \"current\": \"'$19.99'\",\n                        \"type\": \"string\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"HTML Element Selection\",\n                      \"points\": [\n                        \"soup.find() selects the first matching element\",\n                        \"The 'span' tag with class 'product-price' is selected\",\n                        \"The .text property extracts the text content of the element\"\n                      ],\n                      \"focus\": \"Understanding how to select and extract data from HTML elements\"\n                    }\n                  }\n                ]\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}\n```",
+  "parsedJson": {
+    "feature": {
+      "name": "Web Scraping with Python",
+      "description": "Extracting data from websites using Python libraries like BeautifulSoup and Scrapy",
+      "source": "https://realpython.com/python-web-scraping-practical-introduction/",
+      "categories": {
+        "Web Development": {
+          "scenarios": [
+            "Scraping data from e-commerce sites",
+            "Extracting job listings from career sites",
+            "Gathering news articles and blog posts"
+          ],
+          "complexity": "Intermediate"
+        },
+        "Data Analysis": {
+          "scenarios": [
+            "Collecting data for research projects",
+            "Building datasets for machine learning models"
+          ],
+          "complexity": "Advanced"
+        }
+      },
+      "flows": [
+        {
+          "name": "Basic Web Scraping",
+          "complexity": "Beginner",
+          "time": "2 hours",
+          "prerequisites": "Basic knowledge of Python, HTML, and HTTP requests"
+        },
+        {
+          "name": "Advanced Web Scraping",
+          "complexity": "Intermediate",
+          "time": "6 hours",
+          "prerequisites": "Understanding of BeautifulSoup, Scrapy, and handling JavaScript-rendered pages"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Scraping Product Details from an E-commerce Site",
+          "description": "Extracting product information like name, price, and description from an online store",
+          "tag": "Web Scraping",
+          "steps": [
+            {
+              "name": "Setup",
+              "entryPoint": "main.py",
+              "sections": [
+                {
+                  "name": "Importing Libraries",
+                  "codeBlocks": [
+                    {
+                      "name": "Import Statements",
+                      "code": [
+                        "import requests",
+                        "from bs4 import BeautifulSoup"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Web Scraping Libraries",
+                        "points": [
+                          "requests library is used for sending HTTP requests",
+                          "BeautifulSoup library is used for parsing HTML/XML data"
+                        ],
+                        "focus": "Understanding the purpose and usage of these libraries"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Fetching Data",
+              "entryPoint": "scraper.py",
+              "sections": [
+                {
+                  "name": "Sending HTTP Request",
+                  "codeBlocks": [
+                    {
+                      "name": "Fetch Product Page",
+                      "code": [
+                        "url = 'https://example.com/product/123'",
+                        "response = requests.get(url)"
+                      ],
+                      "variables": [
+                        {
+                          "name": "url",
+                          "previous": null,
+                          "current": "'https://example.com/product/123'",
+                          "type": "string",
+                          "important": true
+                        },
+                        {
+                          "name": "response",
+                          "previous": null,
+                          "current": "<Response [200]>",
+                          "type": "requests.models.Response",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "HTTP Requests",
+                        "points": [
+                          "requests.get() sends a GET request to the provided URL",
+                          "The response object contains the server's response data"
+                        ],
+                        "focus": "Understanding how to send HTTP requests and handle responses"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Parsing HTML",
+                  "codeBlocks": [
+                    {
+                      "name": "Create BeautifulSoup Object",
+                      "code": [
+                        "soup = BeautifulSoup(response.content, 'html.parser')"
+                      ],
+                      "variables": [
+                        {
+                          "name": "soup",
+                          "previous": null,
+                          "current": "<BeautifulSoup object>",
+                          "type": "bs4.BeautifulSoup",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "HTML Parsing",
+                        "points": [
+                          "BeautifulSoup parses the HTML content from the response",
+                          "The parser 'html.parser' is a Python-based parser"
+                        ],
+                        "focus": "Understanding how to parse HTML using BeautifulSoup"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Data Extraction",
+              "entryPoint": "scraper.py",
+              "sections": [
+                {
+                  "name": "Extracting Product Details",
+                  "codeBlocks": [
+                    {
+                      "name": "Find Product Name",
+                      "code": [
+                        "product_name = soup.find('h1', {'class': 'product-title'}).text.strip()"
+                      ],
+                      "variables": [
+                        {
+                          "name": "product_name",
+                          "previous": null,
+                          "current": "'Example Product'",
+                          "type": "string",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "HTML Element Selection",
+                        "points": [
+                          "soup.find() selects the first matching element",
+                          "The 'h1' tag with class 'product-title' is selected",
+                          "The .text property extracts the text content of the element"
+                        ],
+                        "focus": "Understanding how to select and extract data from HTML elements"
+                      }
+                    },
+                    {
+                      "name": "Find Product Price",
+                      "code": [
+                        "product_price = soup.find('span', {'class': 'product-price'}).text.strip()"
+                      ],
+                      "variables": [
+                        {
+                          "name": "product_price",
+                          "previous": null,
+                          "current": "'$19.99'",
+                          "type": "string",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "HTML Element Selection",
+                        "points": [
+                          "soup.find() selects the first matching element",
+                          "The 'span' tag with class 'product-price' is selected",
+                          "The .text property extracts the text content of the element"
+                        ],
+                        "focus": "Understanding how to select and extract data from HTML elements"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

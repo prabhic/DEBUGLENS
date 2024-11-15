@@ -1,0 +1,204 @@
+{
+  "timestamp": "2024-11-11T17:41:19.210Z",
+  "prompt": "Explain Node.js Request Handling What happens internally when Node.js receives an HTTP request?",
+  "response": {
+    "feature": {
+      "name": "Node.js HTTP Request Handling",
+      "description": "The process of receiving, parsing, and handling HTTP requests in Node.js, including managing the event loop, worker threads, and response handling.",
+      "source": "Node.js is a JavaScript runtime built on Chrome's V8 JavaScript engine, designed for building scalable network applications.",
+      "categories": {
+        "RequestParsing": {
+          "scenarios": [
+            "BasicRequestParsing",
+            "HandlingMultipartFormData"
+          ],
+          "complexity": "Basic"
+        },
+        "EventLoopManagement": {
+          "scenarios": [
+            "ManagingEventLoopQueue",
+            "WorkerThreadsAndThreadPool"
+          ],
+          "complexity": "Advanced"
+        },
+        "ResponseHandling": {
+          "scenarios": [
+            "BasicResponseHandling",
+            "StreamingResponses"
+          ],
+          "complexity": "Basic"
+        }
+      },
+      "flows": [
+        {
+          "name": "Parsing and Handling HTTP Request",
+          "complexity": "Advanced",
+          "time": "20 mins",
+          "prerequisites": "Understanding of Node.js event-driven architecture, event loop, and basic HTTP request/response cycle."
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "HandlingMultipartFormData",
+          "description": "Handling a multipart/form-data request, which includes parsing the request body and handling file uploads.",
+          "tag": "RequestParsing",
+          "steps": [
+            {
+              "name": "Receiving Request",
+              "sections": [
+                {
+                  "name": "Incoming Request",
+                  "codeBlocks": [
+                    {
+                      "name": "RequestEventHandler",
+                      "code": [
+                        "const http = require('http');",
+                        "",
+                        "const server = http.createServer((req, res) => {",
+                        "  // Request handling logic here",
+                        "});",
+                        "",
+                        "server.listen(3000);"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "HTTP Server in Node.js",
+                        "points": [
+                          "Node.js includes a built-in http module for creating HTTP servers",
+                          "http.createServer() creates a new HTTP server instance",
+                          "The callback function is called for each new HTTP request received"
+                        ],
+                        "focus": "Understanding how to create a basic HTTP server in Node.js and handle incoming requests"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Parsing Request Body",
+                  "codeBlocks": [
+                    {
+                      "name": "RequestBodyParsing",
+                      "code": [
+                        "const server = http.createServer((req, res) => {",
+                        "  let body = '';",
+                        "",
+                        "  req.on('data', (chunk) => {",
+                        "    body += chunk;",
+                        "  });",
+                        "",
+                        "  req.on('end', () => {",
+                        "    // Request body parsing logic here",
+                        "  });",
+                        "});"
+                      ],
+                      "variables": [
+                        {
+                          "name": "body",
+                          "previous": "''",
+                          "current": "Accumulates request body data",
+                          "type": "string",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Parsing Request Body",
+                        "points": [
+                          "Request body data arrives in chunks via the 'data' event",
+                          "The 'end' event signals the end of the request body",
+                          "Accumulating chunks into a single 'body' variable"
+                        ],
+                        "focus": "Understanding how to parse the request body data in Node.js"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Handling Multipart Form Data",
+                  "codeBlocks": [
+                    {
+                      "name": "MultipartFormDataParsing",
+                      "code": [
+                        "const multiparty = require('multiparty');",
+                        "",
+                        "req.on('end', () => {",
+                        "  const form = new multiparty.Form();",
+                        "",
+                        "  form.parse(req, (err, fields, files) => {",
+                        "    if (err) {",
+                        "      // Handle error",
+                        "      return;",
+                        "    }",
+                        "",
+                        "    // Access form fields and files",
+                        "    console.log(fields);",
+                        "    console.log(files);",
+                        "  });",
+                        "});"
+                      ],
+                      "variables": [
+                        {
+                          "name": "fields",
+                          "previous": "undefined",
+                          "current": "Object containing form field values",
+                          "type": "object",
+                          "important": true
+                        },
+                        {
+                          "name": "files",
+                          "previous": "undefined",
+                          "current": "Object containing file uploads",
+                          "type": "object",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Parsing Multipart Form Data",
+                        "points": [
+                          "Multipart form data is used to upload files and other complex data",
+                          "The 'multiparty' module is used to parse multipart form data",
+                          "form.parse() parses the request and provides field values and file uploads"
+                        ],
+                        "focus": "Understanding how to handle multipart form data requests in Node.js"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Sending Response",
+              "entryPoint": "After parsing the request and handling any required logic, a response needs to be sent back to the client.",
+              "sections": [
+                {
+                  "name": "Sending Response",
+                  "codeBlocks": [
+                    {
+                      "name": "SendingResponseToClient",
+                      "code": [
+                        "res.statusCode = 200;",
+                        "res.setHeader('Content-Type', 'text/plain');",
+                        "res.write('Hello World');",
+                        "res.end();"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Sending HTTP Response",
+                        "points": [
+                          "res.statusCode sets the HTTP status code of the response",
+                          "res.setHeader() sets response headers",
+                          "res.write() writes data to the response body",
+                          "res.end() signals the end of the response and flushes the response to the client"
+                        ],
+                        "focus": "Understanding how to send a response back to the client in Node.js"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

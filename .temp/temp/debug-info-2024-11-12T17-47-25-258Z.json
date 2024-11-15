@@ -1,0 +1,303 @@
+{
+  "timestamp": "2024-11-12T17:47:25.260Z",
+  "prompt": "Explain Kubernetes Pod Deployment What happens internally when you deploy a new pod to Kubernetes?",
+  "response": {
+    "feature": {
+      "name": "Kubernetes Pod Deployment",
+      "description": "The process of deploying a new pod (group of containers) to a Kubernetes cluster.",
+      "source": "Kubernetes is an open-source container orchestration system for automating deployment, scaling, and management of containerized applications.",
+      "categories": {
+        "Cluster Management": {
+          "scenarios": [
+            "Creating a New Pod"
+          ],
+          "complexity": "Advanced"
+        }
+      },
+      "flows": [
+        {
+          "name": "Deploy New Pod Flow",
+          "complexity": "Advanced",
+          "time": "10-15 mins",
+          "prerequisites": "Understanding of Kubernetes architecture, API server, scheduler, kubelet"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Creating a New Pod",
+          "description": "Walk through the internals of creating and scheduling a new pod in a Kubernetes cluster",
+          "tag": "ClusterManagement",
+          "steps": [
+            {
+              "name": "User sends pod create request",
+              "entryPoint": "Kubernetes API server receives the request to create a new pod",
+              "sections": [
+                {
+                  "name": "Admission Control",
+                  "codeBlocks": [
+                    {
+                      "name": "admission_control",
+                      "code": [
+                        "func admissionControl(podSpec PodSpec) error {",
+                        "  // Validate pod spec against admission policies",
+                        "  if !validatePodSpec(podSpec) {",
+                        "    return fmt.Errorf(\"Pod spec is invalid\")",
+                        "  }",
+                        "  return nil",
+                        "}"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Admission Control",
+                        "points": [
+                          "Enforces policies on new pod creation requests",
+                          "Checks pod spec against configured policies",
+                          "Rejects requests that violate policies"
+                        ],
+                        "focus": "Ensuring pod spec meets cluster requirements"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Create Pod Object",
+                  "codeBlocks": [
+                    {
+                      "name": "create_pod_object",
+                      "code": [
+                        "type Pod struct {",
+                        "  Metadata PodMetadata",
+                        "  Spec     PodSpec",
+                        "  Status   PodStatus",
+                        "}",
+                        "",
+                        "func createPodObject(podSpec PodSpec) (*Pod, error) {",
+                        "  pod := &Pod{",
+                        "    Metadata: generatePodMetadata(podSpec),",
+                        "    Spec:     podSpec,",
+                        "    Status:   PodPending,",
+                        "  }",
+                        "  return pod, nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "pod",
+                          "current": "{Metadata: {...}, Spec: {...}, Status: PodPending}",
+                          "type": "Pod",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pod Object",
+                        "points": [
+                          "Core Kubernetes object representing a pod",
+                          "Contains metadata, spec, and current status",
+                          "Initialized with pod spec from user request"
+                        ],
+                        "focus": "Representing the desired and actual state of the pod"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Schedule Pod on a Node",
+              "sections": [
+                {
+                  "name": "Scheduler",
+                  "codeBlocks": [
+                    {
+                      "name": "schedule_pod",
+                      "code": [
+                        "func schedulePod(pod *Pod, nodes []Node) (Node, error) {",
+                        "  // Apply scheduling algorithm to find best node",
+                        "  bestNode, err := findBestNode(pod, nodes)",
+                        "  if err != nil {",
+                        "    return Node{}, err",
+                        "  }",
+                        "  // Update pod status and node info",
+                        "  pod.Status = PodScheduled",
+                        "  pod.NodeName = bestNode.Name",
+                        "  return bestNode, nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "pod",
+                          "previous": "{Metadata: {...}, Spec: {...}, Status: PodPending}",
+                          "current": "{Metadata: {...}, Spec: {...}, Status: PodScheduled, NodeName: \"node01\"}",
+                          "type": "Pod",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Kubernetes Scheduler",
+                        "points": [
+                          "Watches for new pods and assigns them to nodes",
+                          "Considers resource requirements, constraints, affinities",
+                          "Applies scheduling algorithms and policies"
+                        ],
+                        "focus": "Finding the best node to run the pod based on its requirements"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Launch Pod on Node",
+              "entryPoint": "Kubelet on the scheduled node receives pod spec and launch instructions",
+              "sections": [
+                {
+                  "name": "Pod Creation",
+                  "codeBlocks": [
+                    {
+                      "name": "create_pod_sandbox",
+                      "code": [
+                        "func createPodSandbox(pod *Pod) (*PodSandbox, error) {",
+                        "  // Create network namespace, assign IPs, set up network",
+                        "  netNS, err := setupPodNetwork(pod)",
+                        "  if err != nil {",
+                        "    return nil, err",
+                        "  }",
+                        "  // Initialize other pod-level resources",
+                        "  podSandbox := &PodSandbox{",
+                        "    NetNS: netNS,",
+                        "    Containers: []Container{},",
+                        "  }",
+                        "  return podSandbox, nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podSandbox",
+                          "current": "{NetNS: 0xfff, Containers: []}",
+                          "type": "PodSandbox",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pod Sandbox",
+                        "points": [
+                          "Shared execution environment for pod's containers",
+                          "Includes network namespace, volumes, etc.",
+                          "Isolated from host and other pods"
+                        ],
+                        "focus": "Setting up the pod-level resources before launching containers"
+                      }
+                    },
+                    {
+                      "name": "create_containers",
+                      "code": [
+                        "func createContainers(podSandbox *PodSandbox, pod *Pod) error {",
+                        "  for _, containerSpec := range pod.Spec.Containers {",
+                        "    container, err := createContainer(containerSpec, podSandbox)",
+                        "    if err != nil {",
+                        "      return err",
+                        "    }",
+                        "    podSandbox.Containers = append(podSandbox.Containers, container)",
+                        "  }",
+                        "  return nil",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "podSandbox",
+                          "previous": "{NetNS: 0xfff, Containers: []}",
+                          "current": "{NetNS: 0xfff, Containers: [{...}, {...}]}",
+                          "type": "PodSandbox",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Container Creation",
+                        "points": [
+                          "Each container is created within the pod sandbox",
+                          "Containers share sandbox resources like network",
+                          "Containers are isolated from each other"
+                        ],
+                        "focus": "Launching containers that make up the pod"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Start Containers",
+                  "codeBlocks": [
+                    {
+                      "name": "start_containers",
+                      "code": [
+                        "func startContainers(podSandbox *PodSandbox) {",
+                        "  for _, container := range podSandbox.Containers {",
+                        "    err := container.Start()",
+                        "    if err != nil {",
+                        "      // Handle error",
+                        "    }",
+                        "  }",
+                        "}"
+                      ],
+                      "variables": [],
+                      "conceptDetails": {
+                        "title": "Container Start",
+                        "points": [
+                          "Containers are started after creation",
+                          "Process isolation, resource constraints applied",
+                          "Container is now running the app/workload"
+                        ],
+                        "focus": "Executing the actual container processes"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Update Pod Status",
+              "sections": [
+                {
+                  "name": "Pod Running",
+                  "codeBlocks": [
+                    {
+                      "name": "update_pod_status",
+                      "code": [
+                        "func updatePodStatus(pod *Pod, running bool) error {",
+                        "  if running {",
+                        "    pod.Status = PodRunning",
+                        "  } else {",
+                        "    pod.Status = PodFailed",
+                        "  }",
+                        "  // Update pod status in etcd",
+                        "  return updatePodInEtcd(pod)",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "pod",
+                          "previous": "{Metadata: {...}, Spec: {...}, Status: PodScheduled, NodeName: \"node01\"}",
+                          "current": "{Metadata: {...}, Spec: {...}, Status: PodRunning, NodeName: \"node01\"}",
+                          "type": "Pod",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Pod Status",
+                        "points": [
+                          "Pod status reflects current state of the pod",
+                          "Stored in etcd and visible via API server",
+                          "Used for monitoring, rescheduling, etc."
+                        ],
+                        "focus": "Updating the pod status to Running after successful launch"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

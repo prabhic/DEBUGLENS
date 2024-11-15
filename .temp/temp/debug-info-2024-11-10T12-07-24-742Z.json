@@ -1,0 +1,175 @@
+{
+  "timestamp": "2024-11-10T12:07:24.744Z",
+  "prompt": "how does linux switch process",
+  "fullResponse": "```json\n{\n  \"feature\": {\n    \"name\": \"Linux Process Switching\",\n    \"description\": \"Understanding how the Linux kernel switches between processes\",\n    \"source\": \"Linux kernel source code\",\n    \"categories\": {\n      \"Basics\": {\n        \"scenarios\": [\"Process Scheduling\", \"Context Switching\"],\n        \"complexity\": \"Beginner\"\n      },\n      \"Advanced\": {\n        \"scenarios\": [\"Process States\", \"Preemptive Multitasking\", \"Kernel Synchronization\"],\n        \"complexity\": \"Advanced\"\n      },\n      \"Internals\": {\n        \"scenarios\": [\"Process Descriptor\", \"Kernel Data Structures\", \"Trap Handling\"],\n        \"complexity\": \"Expert\"\n      }\n    },\n    \"flows\": [\n      {\n        \"name\": \"Process Scheduling\",\n        \"complexity\": \"Basic\",\n        \"time\": \"5 mins\",\n        \"prerequisites\": \"None\"\n      },\n      {\n        \"name\": \"Context Switching\",\n        \"complexity\": \"Basic\",\n        \"time\": \"8 mins\",\n        \"prerequisites\": \"Process Scheduling\"\n      },\n      {\n        \"name\": \"Process States\",\n        \"complexity\": \"Advanced\",\n        \"time\": \"10 mins\",\n        \"prerequisites\": \"Context Switching\"\n      },\n      {\n        \"name\": \"Preemptive Multitasking\",\n        \"complexity\": \"Advanced\",\n        \"time\": \"15 mins\",\n        \"prerequisites\": \"Process States\"\n      }\n    ],\n    \"scenarios\": [\n      {\n        \"name\": \"Linux Process Scheduling\",\n        \"description\": \"How the Linux kernel schedules and switches between processes\",\n        \"tag\": \"BasicScenario\",\n        \"steps\": [\n          {\n            \"name\": \"Process Scheduling Overview\",\n            \"entryPoint\": \"Understand the role of the Linux scheduler\",\n            \"sections\": [\n              {\n                \"name\": \"Scheduler Responsibilities\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Scheduler Tasks\",\n                    \"code\": [\n                      \"/* The Linux scheduler is responsible for:\",\n                      \" * - Selecting the next process to run\",\n                      \" * - Allocating CPU time to processes\",\n                      \" * - Ensuring fairness and prioritization\",\n                      \" * - Handling process preemption\",\n                      \" */\"\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Process Scheduling\",\n                      \"points\": [\n                        \"Determines which process should run next on the CPU\",\n                        \"Aims to maximize CPU utilization and responsiveness\",\n                        \"Employs scheduling algorithms like Completely Fair Scheduler (CFS)\"\n                      ],\n                      \"focus\": \"Understanding the role of the Linux scheduler\"\n                    }\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"name\": \"Context Switching\",\n            \"entryPoint\": \"Explore the process of switching between tasks\",\n            \"sections\": [\n              {\n                \"name\": \"Context Switch Mechanism\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Context Switch Steps\",\n                    \"code\": [\n                      \"/* Context switching involves:\",\n                      \" * 1. Saving the current process state\",\n                      \" * 2. Updating kernel data structures\",\n                      \" * 3. Loading the next process state\",\n                      \" * 4. Executing the next process\",\n                      \" */\"\n                    ],\n                    \"variables\": [\n                      {\n                        \"name\": \"current\",\n                        \"previous\": \"process_A\",\n                        \"current\": \"process_B\",\n                        \"type\": \"struct task_struct *\",\n                        \"important\": true\n                      }\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Context Switching\",\n                      \"points\": [\n                        \"Saves the current process state (registers, memory mappings, etc.)\",\n                        \"Switches to the next process by loading its state\",\n                        \"Managed by the kernel's context_switch() function\"\n                      ],\n                      \"focus\": \"Understanding the mechanics of switching between processes\"\n                    }\n                  }\n                ]\n              }\n            ]\n          },\n          {\n            \"name\": \"Process States\",\n            \"entryPoint\": \"Explore the different states a process can be in\",\n            \"sections\": [\n              {\n                \"name\": \"Process State Transitions\",\n                \"codeBlocks\": [\n                  {\n                    \"name\": \"Process State Diagram\",\n                    \"code\": [\n                      \"/* Process states in Linux:\",\n                      \" * - Running: Currently executing on the CPU\",\n                      \" * - Interruptible: Waiting for an event (e.g., I/O)\",\n                      \" * - Uninterruptible: Waiting for a specific event\",\n                      \" * - Stopped: Suspended and cannot be scheduled\",\n                      \" * - Zombie: Terminated but not yet cleaned up\",\n                      \" */\"\n                    ],\n                    \"conceptDetails\": {\n                      \"title\": \"Process States\",\n                      \"points\": [\n                        \"Processes transition between various states\",\n                        \"State changes occur due to events or system calls\",\n                        \"Understanding state transitions is crucial for process management\"\n                      ],\n                      \"focus\": \"Exploring the different states a process can be in\"\n                    }\n                  }\n                ]\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}\n```\n\nThis JSON structure provides an overview of the Linux process switching feature, including categories, flows, and a basic scenario that explores process scheduling, context switching, and process states. The scenario includes code snippets, variable changes, and conceptual details to help users understand the internals of process switching in the Linux kernel.",
+  "parsedJson": {
+    "feature": {
+      "name": "Linux Process Switching",
+      "description": "Understanding how the Linux kernel switches between processes",
+      "source": "Linux kernel source code",
+      "categories": {
+        "Basics": {
+          "scenarios": [
+            "Process Scheduling",
+            "Context Switching"
+          ],
+          "complexity": "Beginner"
+        },
+        "Advanced": {
+          "scenarios": [
+            "Process States",
+            "Preemptive Multitasking",
+            "Kernel Synchronization"
+          ],
+          "complexity": "Advanced"
+        },
+        "Internals": {
+          "scenarios": [
+            "Process Descriptor",
+            "Kernel Data Structures",
+            "Trap Handling"
+          ],
+          "complexity": "Expert"
+        }
+      },
+      "flows": [
+        {
+          "name": "Process Scheduling",
+          "complexity": "Basic",
+          "time": "5 mins",
+          "prerequisites": "None"
+        },
+        {
+          "name": "Context Switching",
+          "complexity": "Basic",
+          "time": "8 mins",
+          "prerequisites": "Process Scheduling"
+        },
+        {
+          "name": "Process States",
+          "complexity": "Advanced",
+          "time": "10 mins",
+          "prerequisites": "Context Switching"
+        },
+        {
+          "name": "Preemptive Multitasking",
+          "complexity": "Advanced",
+          "time": "15 mins",
+          "prerequisites": "Process States"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Linux Process Scheduling",
+          "description": "How the Linux kernel schedules and switches between processes",
+          "tag": "BasicScenario",
+          "steps": [
+            {
+              "name": "Process Scheduling Overview",
+              "entryPoint": "Understand the role of the Linux scheduler",
+              "sections": [
+                {
+                  "name": "Scheduler Responsibilities",
+                  "codeBlocks": [
+                    {
+                      "name": "Scheduler Tasks",
+                      "code": [
+                        "/* The Linux scheduler is responsible for:",
+                        " * - Selecting the next process to run",
+                        " * - Allocating CPU time to processes",
+                        " * - Ensuring fairness and prioritization",
+                        " * - Handling process preemption",
+                        " */"
+                      ],
+                      "conceptDetails": {
+                        "title": "Process Scheduling",
+                        "points": [
+                          "Determines which process should run next on the CPU",
+                          "Aims to maximize CPU utilization and responsiveness",
+                          "Employs scheduling algorithms like Completely Fair Scheduler (CFS)"
+                        ],
+                        "focus": "Understanding the role of the Linux scheduler"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Context Switching",
+              "entryPoint": "Explore the process of switching between tasks",
+              "sections": [
+                {
+                  "name": "Context Switch Mechanism",
+                  "codeBlocks": [
+                    {
+                      "name": "Context Switch Steps",
+                      "code": [
+                        "/* Context switching involves:",
+                        " * 1. Saving the current process state",
+                        " * 2. Updating kernel data structures",
+                        " * 3. Loading the next process state",
+                        " * 4. Executing the next process",
+                        " */"
+                      ],
+                      "variables": [
+                        {
+                          "name": "current",
+                          "previous": "process_A",
+                          "current": "process_B",
+                          "type": "struct task_struct *",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Context Switching",
+                        "points": [
+                          "Saves the current process state (registers, memory mappings, etc.)",
+                          "Switches to the next process by loading its state",
+                          "Managed by the kernel's context_switch() function"
+                        ],
+                        "focus": "Understanding the mechanics of switching between processes"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Process States",
+              "entryPoint": "Explore the different states a process can be in",
+              "sections": [
+                {
+                  "name": "Process State Transitions",
+                  "codeBlocks": [
+                    {
+                      "name": "Process State Diagram",
+                      "code": [
+                        "/* Process states in Linux:",
+                        " * - Running: Currently executing on the CPU",
+                        " * - Interruptible: Waiting for an event (e.g., I/O)",
+                        " * - Uninterruptible: Waiting for a specific event",
+                        " * - Stopped: Suspended and cannot be scheduled",
+                        " * - Zombie: Terminated but not yet cleaned up",
+                        " */"
+                      ],
+                      "conceptDetails": {
+                        "title": "Process States",
+                        "points": [
+                          "Processes transition between various states",
+                          "State changes occur due to events or system calls",
+                          "Understanding state transitions is crucial for process management"
+                        ],
+                        "focus": "Exploring the different states a process can be in"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

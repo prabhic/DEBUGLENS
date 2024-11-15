@@ -1,0 +1,128 @@
+{
+  "timestamp": "2024-11-10T16:11:45.947Z",
+  "prompt": "Explain Docker Container Creation Explain how Docker creates and isolates containers using namespaces and cgroups",
+  "response": {
+    "feature": {
+      "name": "Docker Container Creation",
+      "description": "Docker creates and isolates containers using kernel namespaces and cgroups. Namespaces provide isolation for processes, networks, mounts, etc. Cgroups limit resource usage.",
+      "source": "Docker is an open-source containerization platform that automates deploying applications inside portable, self-sufficient containers.",
+      "categories": {
+        "Namespace Isolation": {
+          "scenarios": [
+            "Process Namespace Isolation",
+            "Network Namespace Isolation",
+            "Mount Namespace Isolation"
+          ],
+          "complexity": "Advanced"
+        },
+        "Cgroup Resource Limiting": {
+          "scenarios": [
+            "CPU Limiting",
+            "Memory Limiting",
+            "IO Limiting"
+          ],
+          "complexity": "Expert"
+        }
+      },
+      "flows": [
+        {
+          "name": "Process Namespace Isolation",
+          "complexity": "Advanced",
+          "time": "15 mins",
+          "prerequisites": "Understanding of Linux namespaces and process trees"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "Process Namespace Isolation",
+          "description": "Docker creates a new process namespace for each container, isolating the processes inside from the host. Processes have different PIDs on host and container.",
+          "tag": "NamespaceIsolation",
+          "steps": [
+            {
+              "name": "Container Process Creation",
+              "entryPoint": "docker_container.go:Create()",
+              "sections": [
+                {
+                  "name": "Namespace Setup",
+                  "codeBlocks": [
+                    {
+                      "name": "createNamespacesFunc",
+                      "code": [
+                        "func createNamespacesFunc(tty bool, rootfs string) createNamespacesFunc {",
+                        "    return func(messageQueue chan<- InitMsg) (string, string, error) {",
+                        "        // Create a new process namespace",
+                        "        ns, err := namespace.NewNsProcess()"
+                      ],
+                      "variables": [
+                        {
+                          "name": "ns",
+                          "previous": "N/A",
+                          "current": "namespace.NsProcess",
+                          "type": "struct",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Process Namespaces",
+                        "points": [
+                          "Provide isolation for processes",
+                          "Each namespace has its own set of process IDs",
+                          "Processes in different namespaces have different PIDs"
+                        ],
+                        "focus": "Docker creates a new process namespace for each container to isolate processes"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Container Process Creation",
+                  "codeBlocks": [
+                    {
+                      "name": "commandCreate",
+                      "code": [
+                        "containerId, containerPipe, err := commandCreate()",
+                        "if err != nil {",
+                        "    return err",
+                        "}",
+                        "",
+                        "// Create the container's root filesystem",
+                        "if err := createRootFs(containerId, containerPipe, rootfs); err != nil {",
+                        "    return err",
+                        "}"
+                      ],
+                      "variables": [
+                        {
+                          "name": "containerId",
+                          "previous": "N/A",
+                          "current": "Unique container ID",
+                          "type": "string",
+                          "important": true
+                        },
+                        {
+                          "name": "containerPipe",
+                          "previous": "N/A",
+                          "current": "os.File for container process I/O",
+                          "type": "os.File",
+                          "important": false
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Container Process Creation",
+                        "points": [
+                          "Docker forks a new process in the container's namespace",
+                          "This process has PID 1 inside the container",
+                          "But a different PID outside the namespace"
+                        ],
+                        "focus": "Processes inside the container namespace are isolated from the host"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

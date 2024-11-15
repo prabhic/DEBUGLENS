@@ -1,0 +1,153 @@
+{
+  "timestamp": "2024-11-10T15:54:49.728Z",
+  "prompt": "Explain How Git commit works internally",
+  "response": {
+    "feature": {
+      "name": "Git Commit Internals",
+      "description": "Understand how the git commit command works internally, including the steps involved in creating a new commit object and updating the repository's state.",
+      "source": "Git version control system",
+      "categories": {
+        "CommitProcess": {
+          "scenarios": [
+            "CommitLifecycle"
+          ],
+          "complexity": "Advanced"
+        }
+      },
+      "flows": [
+        {
+          "name": "Commit Lifecycle",
+          "complexity": "Advanced",
+          "time": "20 mins",
+          "prerequisites": "Understanding of Git data model (blobs, trees, commits)"
+        }
+      ],
+      "scenarios": [
+        {
+          "name": "CommitLifecycle",
+          "description": "Detailed walkthrough of the lifecycle of a git commit, from staging changes to creating the commit object and updating references.",
+          "tag": "CommitProcess",
+          "steps": [
+            {
+              "name": "Stage Changes",
+              "entryPoint": "User has made changes to files in the working directory and wants to commit them.",
+              "sections": [
+                {
+                  "name": "Git Add",
+                  "codeBlocks": [
+                    {
+                      "name": "StageFile",
+                      "code": [
+                        "git add file1.txt"
+                      ],
+                      "variables": [
+                        {
+                          "name": "stagedFiles",
+                          "previous": "[]",
+                          "current": "['file1.txt']",
+                          "type": "array of strings",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "The Staging Area",
+                        "points": [
+                          "Git has a staging area that stores changes to be committed",
+                          "git add moves changes from the working directory to the staging area"
+                        ],
+                        "focus": "Understand the role of the staging area in the commit process"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Create Commit",
+              "entryPoint": "With changes staged, the user can now create a new commit.",
+              "sections": [
+                {
+                  "name": "Git Commit",
+                  "codeBlocks": [
+                    {
+                      "name": "CreateCommit",
+                      "code": [
+                        "git commit -m 'Add file1.txt'"
+                      ],
+                      "variables": [
+                        {
+                          "name": "commitMessage",
+                          "previous": null,
+                          "current": "'Add file1.txt'",
+                          "type": "string",
+                          "important": false
+                        },
+                        {
+                          "name": "commitTree",
+                          "previous": null,
+                          "current": "NewTree('file1.txt')",
+                          "type": "git tree object",
+                          "important": true
+                        },
+                        {
+                          "name": "commitObject",
+                          "previous": null,
+                          "current": "NewCommit(commitTree, parentCommit, commitMessage)",
+                          "type": "git commit object",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "The Commit Object",
+                        "points": [
+                          "A commit object stores metadata like the author, message, and a tree of file contents",
+                          "It points to a tree object representing the staged file state at that commit",
+                          "It also points to the previous commit(s) to maintain history"
+                        ],
+                        "focus": "Understand the structure and purpose of a Git commit object"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Update References",
+              "sections": [
+                {
+                  "name": "Branch Update",
+                  "codeBlocks": [
+                    {
+                      "name": "UpdateBranch",
+                      "code": [
+                        "git update-ref refs/heads/master commitObject"
+                      ],
+                      "variables": [
+                        {
+                          "name": "HEAD",
+                          "previous": "OldCommitSHA",
+                          "current": "NewCommitSHA",
+                          "type": "git commit reference",
+                          "important": true
+                        }
+                      ],
+                      "conceptDetails": {
+                        "title": "Git References",
+                        "points": [
+                          "Git uses references to point to commit objects",
+                          "Branches are references that are updated on each commit",
+                          "HEAD is a special reference pointing to the currently checked out commit"
+                        ],
+                        "focus": "Understand how Git updates references like branches and HEAD after a commit"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
