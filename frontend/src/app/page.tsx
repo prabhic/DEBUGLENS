@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { GherkinJSONViewer } from '@/components/CodeViewer/GherkinJSONViewer';
+import { GherkinJSONAsyncViewer } from '@/components/CodeViewer/GherkinJSONAsyncViewer';
 import { GitFeatureContent } from '@/types/gherkin';
 import { AIChatDialog } from '@/components/Chat/AIChatDialog';
 import { 
@@ -28,6 +29,7 @@ import {
 import { generateGherkinFile, generateDebugInfoJson } from '@/services/fileGenerationService';
 import { isFeatureEnabled } from '@/config/features';
 import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
+import { AsyncDebugProvider } from '@/contexts/AsyncDebugContext';
 
 // Quick start options
 const QUICK_START_OPTIONS = [
@@ -481,21 +483,35 @@ export default function Home() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-900">
-      {/* Show loading overlay when isLoading is true */}
-      {isLoading && <DebugLoadingAnimation />}
+    <AsyncDebugProvider>
+      <div className="h-screen flex flex-col overflow-hidden bg-gray-900">
+        {/* Show loading overlay when isLoading is true */}
+        {isLoading && <DebugLoadingAnimation />}
 
-      {!fileType ? renderLandingPage() : (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {renderViewer()}
-        </div>
-      )}
+        {!fileType ? renderLandingPage() : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {isFeatureEnabled('PARALLEL_LOADING') ? (
+              <GherkinJSONAsyncViewer 
+                content={debugInfoJsonParsed} 
+                onReset={resetState} 
+                onOpenAIChat={() => setIsAIChatOpen(true)} 
+              />
+            ) : (
+              <GherkinJSONViewer 
+                content={debugInfoJsonParsed} 
+                onReset={resetState} 
+                onOpenAIChat={() => setIsAIChatOpen(true)} 
+              />
+            )}
+          </div>
+        )}
 
-      <AIChatDialog 
-        isOpen={isAIChatOpen} 
-        onClose={() => setIsAIChatOpen(false)}
-        shortcutHint="Ctrl+L"
-      />
-    </div>
+        <AIChatDialog 
+          isOpen={isAIChatOpen} 
+          onClose={() => setIsAIChatOpen(false)}
+          shortcutHint="Ctrl+L"
+        />
+      </div>
+    </AsyncDebugProvider>
   );  
 }

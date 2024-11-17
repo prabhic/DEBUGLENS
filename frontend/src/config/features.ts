@@ -4,7 +4,8 @@ export const FEATURE_FLAGS = {
   AI_CHAT: true,
   BREAKPOINTS: true,
   VARIABLE_TRACKING: true,
-  CONCEPT_DETAILS: true
+  CONCEPT_DETAILS: true,
+  PARALLEL_LOADING: false,
 } as const;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;

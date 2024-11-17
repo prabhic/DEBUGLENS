@@ -1,4 +1,5 @@
 import { GitFeatureContent } from '@/types/gherkin';
+import { isFeatureEnabled } from '@/config/features';
 
 export async function generateGherkinFile(prompt: string): Promise<string> {
   try {
@@ -27,14 +28,14 @@ export async function generateGherkinFile(prompt: string): Promise<string> {
   }
 }
 
-export async function generateDebugInfoJson(prompt: string): Promise<GitFeatureContent> {
+export async function generateDebugInfoJson(prompt: string, mode: 'sync' | 'parallel' = 'sync'): Promise<GitFeatureContent | { sessionId: string; content: GitFeatureContent }> {
   try {
     const response = await fetch('/api/generate/debug-info', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, mode }),
     });
 
     if (!response.ok) {
@@ -43,6 +44,13 @@ export async function generateDebugInfoJson(prompt: string): Promise<GitFeatureC
     }
 
     const data = await response.json();
+    if (mode === 'parallel') {
+      return {
+        sessionId: data.sessionId,
+        content: data.content,
+      };
+    }
+
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid response format from server');
     }
