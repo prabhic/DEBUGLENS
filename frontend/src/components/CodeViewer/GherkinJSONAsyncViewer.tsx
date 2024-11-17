@@ -9,7 +9,7 @@ import { ResizablePanel } from '@/components/CodeViewer/ResizablePanel';
 import { DebugToolbar } from './DebugToolbar';
 
 export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ content, onReset, onOpenAIChat }) => {
-  const { state, dispatch } = useAsyncDebug();
+  const { state, dispatch, eventEmitter } = useAsyncDebug();
   const [selectedScenario, setSelectedScenario] = React.useState<string>();
   const [rightPanelWidth, setRightPanelWidth] = React.useState<number>(300);
   const [isDebugging, setIsDebugging] = React.useState(false);
@@ -20,6 +20,24 @@ export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ content, on
   const [allCodeBlocks, setAllCodeBlocks] = React.useState<CodeBlockInfo[]>([]);
   const [variables, setVariables] = React.useState<VariableState[]>([]);
   const [currentConcepts, setCurrentConcepts] = React.useState<ConceptsPanelProps['concepts'] | null>(null);
+
+  useEffect(() => {
+    const handleStepLoadSuccess = ({ stepId, data }: { stepId: string; data: any }) => {
+      dispatch({ type: 'LOAD_SUCCESS', stepId, data });
+    };
+
+    const handleStepLoadFailure = ({ stepId, error }: { stepId: string; error: any }) => {
+      dispatch({ type: 'LOAD_FAILURE', stepId, error });
+    };
+
+    eventEmitter.on('stepLoadSuccess', handleStepLoadSuccess);
+    eventEmitter.on('stepLoadFailure', handleStepLoadFailure);
+
+    return () => {
+      eventEmitter.off('stepLoadSuccess', handleStepLoadSuccess);
+      eventEmitter.off('stepLoadFailure', handleStepLoadFailure);
+    };
+  }, [dispatch, eventEmitter]);
 
   // Select first scenario by default
   useEffect(() => {

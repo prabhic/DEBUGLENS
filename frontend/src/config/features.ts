@@ -5,7 +5,7 @@ export const FEATURE_FLAGS = {
   BREAKPOINTS: true,
   VARIABLE_TRACKING: true,
   CONCEPT_DETAILS: true,
-  PARALLEL_LOADING: false,
+  PARALLEL_LOADING: true,
 } as const;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;

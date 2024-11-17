@@ -1,45 +1,45 @@
-// Context and state management for handling asynchronous debug operations
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-// Type for tracking variable values and changes during debugging
+// why: Import necessary React hooks and types for context and state management. usedby: AsyncDebugProvider, useAsyncDebug
+import React, { createContext, useContext, useReducer, ReactNode, useMemo } from 'react';
+// why: Import VariableState type for defining variable structure in DebugStepData. usedby: DebugStepData
 import { VariableState } from '@/types/gherkin';
 
-// Structured data about programming concepts being debugged
+// why: Define structure for concept-related data used in DebugStepData. usedby: DebugStepData
 interface ConceptDetails {
-  title: string; // Name of the programming concept
-  points: string[]; // Key learning points about the concept
-  focus: string; // Main aspect being highlighted
+  title: string; // why: Title of the concept. usedby: ConceptDetails
+  points: string[]; // why: Key points of the concept. usedby: ConceptDetails
+  focus: string; // why: Main focus area of the concept. usedby: ConceptDetails
 }
 
-// Data structure for a single debug step's state and content
+// why: Define structure for each debug step's data. usedby: AsyncDebugState
 interface DebugStepData {
-  status: 'idle' | 'loading' | 'loaded' | 'error'; // Current execution status
-  code?: string[]; // Relevant code snippets being debugged
-  variables?: VariableState[]; // Variables being tracked
-  concepts?: ConceptDetails; // Related programming concepts
-  error?: string; // Error message if debug step fails
+  status: 'idle' | 'loading' | 'loaded' | 'error'; // why: Track the current status of the debug step. usedby: DebugStepData
+  code?: string[]; // why: Optional code snippets related to the debug step. usedby: DebugStepData
+  variables?: VariableState[]; // why: Optional variables involved in the debug step. usedby: DebugStepData
+  concepts?: ConceptDetails; // why: Optional concept details related to the debug step. usedby: DebugStepData
+  error?: string; // why: Optional error message if the step fails. usedby: DebugStepData
 }
 
-// Global state structure for managing multiple debug steps
+// why: Define the overall state structure for async debugging. usedby: asyncDebugReducer, AsyncDebugContextProps
 interface AsyncDebugState {
-  steps: Record<string, DebugStepData>; // Map of step IDs to their debug data
+  steps: Record<string, DebugStepData>; // why: Store debug steps indexed by unique IDs. usedby: AsyncDebugState
 }
 
-// Actions that can modify the debug state
+// why: Define actions for state transitions in the reducer. usedby: asyncDebugReducer
 type AsyncDebugAction =
-  | { type: 'START_LOADING'; stepId: string } // Begin loading debug data
-  | { type: 'LOAD_SUCCESS'; stepId: string; data: Partial<DebugStepData> } // Successfully loaded debug data
-  | { type: 'LOAD_FAILURE'; stepId: string; error: string }; // Failed to load debug data
+  | { type: 'START_LOADING'; stepId: string } // why: Action to mark a step as loading. usedby: asyncDebugReducer
+  | { type: 'LOAD_SUCCESS'; stepId: string; data: Partial<DebugStepData> } // why: Action to update state with loaded data. usedby: asyncDebugReducer
+  | { type: 'LOAD_FAILURE'; stepId: string; error: string }; // why: Action to mark a step as failed with an error. usedby: asyncDebugReducer
 
-// Initial empty state with no debug steps
+// why: Initialize the initial state with no debug steps. usedby: useReducer
 const initialState: AsyncDebugState = {
-  steps: {},
+  steps: {}, // why: Start with an empty record of steps. usedby: initialState
 };
 
-// State reducer handling debug step lifecycle (loading, success, failure)
+// why: Reducer function to handle state transitions based on actions. usedby: useReducer
 const asyncDebugReducer = (state: AsyncDebugState, action: AsyncDebugAction): AsyncDebugState => {
   switch (action.type) {
     case 'START_LOADING':
-      // Initialize loading state for a debug step
+      // why: Update state to mark the specified step as loading. usedby: asyncDebugReducer
       return {
         ...state,
         steps: {
@@ -48,7 +48,7 @@ const asyncDebugReducer = (state: AsyncDebugState, action: AsyncDebugAction): As
         },
       };
     case 'LOAD_SUCCESS':
-      // Update step with successfully loaded debug data
+      // why: Update state with data for the specified step when loading succeeds. usedby: asyncDebugReducer
       return {
         ...state,
         steps: {
@@ -60,7 +60,7 @@ const asyncDebugReducer = (state: AsyncDebugState, action: AsyncDebugAction): As
         },
       };
     case 'LOAD_FAILURE':
-      // Mark step as failed with error message
+      // why: Update state to mark the specified step as failed with an error. usedby: asyncDebugReducer
       return {
         ...state,
         steps: {
@@ -72,35 +72,71 @@ const asyncDebugReducer = (state: AsyncDebugState, action: AsyncDebugAction): As
         },
       };
     default:
+      // why: Return current state if action type is unrecognized. usedby: asyncDebugReducer
       return state;
   }
 };
 
-// Props exposed by the debug context to consumers
+// why: Define context properties for providing state and dispatch function. usedby: AsyncDebugContext
 interface AsyncDebugContextProps {
-  state: AsyncDebugState; // Current debug state
-  dispatch: React.Dispatch<AsyncDebugAction>; // Function to update debug state
+  state: AsyncDebugState; // why: Current state of async debugging. usedby: AsyncDebugContextProps
+  dispatch: React.Dispatch<AsyncDebugAction>; // why: Function to dispatch actions to the reducer. usedby: AsyncDebugContextProps
+  eventEmitter: EventEmitter;
 }
 
-// React Context for sharing debug state across components
+// why: Create a context for async debugging. usedby: AsyncDebugProvider, useAsyncDebug
 const AsyncDebugContext = createContext<AsyncDebugContextProps | undefined>(undefined);
 
-// Provider component that makes debug state available to child components
-export const AsyncDebugProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(asyncDebugReducer, initialState);
+class EventEmitter {
+  private listeners: Map<string, Set<Function>>;
 
+  constructor() {
+    this.listeners = new Map();
+  }
+
+  on(event: string, callback: Function) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)?.add(callback);
+  }
+
+  off(event: string, callback: Function) {
+    this.listeners.get(event)?.delete(callback);
+  }
+
+  emit(event: string, data: any) {
+    this.listeners.get(event)?.forEach(callback => callback(data));
+  }
+}
+
+// why: Provider component to supply state and dispatch to its children. usedby: Application components
+export const AsyncDebugProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // why: Use reducer to manage state and provide dispatch function. usedby: AsyncDebugProvider
+  const [state, dispatch] = useReducer(asyncDebugReducer, initialState);
+  const eventEmitter = useMemo(() => new EventEmitter(), []);
+
+  const contextValue = useMemo(() => ({
+    state,
+    dispatch,
+    eventEmitter
+  }), [state, eventEmitter]);
+
+  // why: Provide state and dispatch to children components. usedby: AsyncDebugProvider
   return (
-    <AsyncDebugContext.Provider value={{ state, dispatch }}>
+    <AsyncDebugContext.Provider value={contextValue}>
       {children}
     </AsyncDebugContext.Provider>
   );
 };
 
-// Hook for components to access and modify debug state
+// why: Hook to access async debug context within components. usedby: Application components
 export const useAsyncDebug = (): AsyncDebugContextProps => {
+  // why: Retrieve context value for state and dispatch. usedby: useAsyncDebug
   const context = useContext(AsyncDebugContext);
+  // why: Ensure hook is used within a provider, throw error if not. usedby: useAsyncDebug
   if (!context) {
     throw new Error('useAsyncDebug must be used within an AsyncDebugProvider');
   }
-  return context;
+  return context; // why: Return context value for use in components. usedby: useAsyncDebug
 }; 
