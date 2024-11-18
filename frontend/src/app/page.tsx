@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { GherkinJSONViewer } from '@/components/CodeViewer/GherkinJSONViewer';
 import { GherkinJSONAsyncViewer } from '@/components/CodeViewer/GherkinJSONAsyncViewer';
-import { GitFeatureContent } from '@/types/gherkin';
+import { FeatureContent } from '@/types/gherkin';
 import { AIChatDialog } from '@/components/Chat/AIChatDialog';
 import { 
   Code2, 
@@ -26,10 +26,11 @@ import {
   faDatabase,
   faCloud
 } from '@fortawesome/free-solid-svg-icons';
-import { generateGherkinFile, generateDebugInfoJson } from '@/services/fileGenerationService';
+import { generateGherkinFile, generateDebugInfoJson, generateDebugInfoJsonAsync } from '@/services/fileGenerationService';
 import { isFeatureEnabled } from '@/config/features';
 import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
 import { AsyncDebugProvider } from '@/contexts/AsyncDebugContext';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Quick start options
 const QUICK_START_OPTIONS = [
@@ -162,19 +163,22 @@ const DebugLoadingAnimation = () => (
 
 // Add type for the API response
 interface DebugInfoResponse {
-  feature?: GitFeatureContent;
+  feature?: FeatureContent;
   error?: string;
 }
 
 export default function Home() {
   const [fileType, setFileType] = useState<'pseudo' | 'gherkin' | 'debug-info-json' | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
-  const [debugInfoJsonParsed, setDebugInfoJsonParsed] = useState<GitFeatureContent | null>(null);
+  const [debugInfoJsonParsed, setDebugInfoJsonParsed] = useState<FeatureContent | null>(null);
   const [inputValue, setInputValue] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAsyncMode, setIsAsyncMode] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Add keyboard shortcut handler
   useEffect(() => {
@@ -195,6 +199,35 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
+
+  // Add effect to watch URL changes and update state accordingly
+  useEffect(() => {
+    const view = searchParams.get('view');
+    
+    // If no view parameter is present, reset to home
+    if (!view) {
+      setFileType(null);
+      setFileContent(null);
+      setDebugInfoJsonParsed(null);
+      setError(null);
+      setIsLoading(false);
+      setIsAIChatOpen(false);
+    }
+  }, [searchParams]); // This will run whenever the URL parameters change
+
+  // Update resetState to handle history
+  const resetState = () => {
+    // Remove any query parameters and update URL
+    router.push('/', { scroll: false });
+    
+    // Reset all state
+    setFileType(null);
+    setFileContent(null);
+    setDebugInfoJsonParsed(null);
+    setError(null);
+    setIsLoading(false);
+    setIsAIChatOpen(false);
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -219,6 +252,7 @@ export default function Home() {
         try {
           const parsedContent = JSON.parse(content);
           if (parsedContent.feature && parsedContent.feature.categories) {
+            console.log('[Page] Parsed JSON:', { parsedContent });
             setDebugInfoJsonParsed(parsedContent.feature);
             setFileType('debug-info-json');
             setFileContent(null);
@@ -239,40 +273,51 @@ export default function Home() {
       alert('Error reading file. Please try again.');
       resetState();
     }
-  };
 
-  const resetState = () => {
-    setFileType(null);
-    setFileContent(null);
-    setDebugInfoJsonParsed(null);
-    setError(null);
-    // Reset the file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    // Add history entry when switching to viewer
+    router.push('/?view=file', { scroll: false });
   };
 
   const renderViewer = () => {
     switch (fileType) {
       case 'pseudo':
-
+        return fileContent && (
+          <div className="w-full h-full overflow-auto">
+            <pre className="p-4 text-gray-300">{fileContent}</pre>
+          </div>
+        );
 
       case 'gherkin':
-
+        return fileContent && (
+          <div className="w-full h-full overflow-auto">
+            <pre className="p-4 text-gray-300">{fileContent}</pre>
+          </div>
+        );
 
       case 'debug-info-json':
         return debugInfoJsonParsed && (
-          <GherkinJSONViewer 
-            content={debugInfoJsonParsed}
-            onReset={resetState}
-            onOpenAIChat={() => setIsAIChatOpen(true)}
-          />
+          isAsyncMode ? (
+            <GherkinJSONAsyncViewer 
+              content={debugInfoJsonParsed}
+              onReset={resetState}
+              onOpenAIChat={() => setIsAIChatOpen(true)}
+              isAsyncMode={isAsyncMode}
+            />
+          ) : (
+            <GherkinJSONViewer
+              content={debugInfoJsonParsed}
+              onReset={resetState}
+              onOpenAIChat={() => setIsAIChatOpen(true)}
+              isAsyncMode={isAsyncMode}
+            />
+          )
         );
       default:
         return null;
     }
   };
 
+  // Update handlers to add history entries
   const handleGherkinGenerate = async (prompt: string) => {
     try {
       setIsLoading(true);
@@ -281,6 +326,9 @@ export default function Home() {
       const gherkinContent = await generateGherkinFile(prompt);
       setFileContent(gherkinContent);
       setFileType('gherkin');
+
+      // Add history entry when switching to viewer
+      router.push('/?view=gherkin', { scroll: false });
 
     } catch (error) {
       console.error('Error generating Gherkin:', error);
@@ -295,6 +343,8 @@ export default function Home() {
       setIsLoading(true);
       setError(null);
 
+      console.log('[Page] Generating JSON:', { prompt });
+
       const response = await generateDebugInfoJson(prompt) as DebugInfoResponse;
       if ('error' in response) {
         throw new Error(response.error as string);
@@ -304,9 +354,37 @@ export default function Home() {
         throw new Error('No feature content received');
       }
       
-      setDebugInfoJsonParsed(response.feature as GitFeatureContent);
+      setDebugInfoJsonParsed(response.feature as FeatureContent);
       setFileType('debug-info-json');
       setFileContent(null);
+
+      // Add history entry when switching to viewer
+      router.push('/?view=debug', { scroll: false });
+
+    } catch (error) {
+      console.error('Error generating JSON:', error);
+      setError('Failed to generate JSON. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleJsonGenerateAsync = async (prompt: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('[Page] Generating JSON Async:', { prompt });
+
+      const response = await generateDebugInfoJsonAsync(prompt);
+      console.log('[Page] Received JSON Async response:', { response });
+      
+      setIsAsyncMode(true);
+      setDebugInfoJsonParsed(response.content);
+      setFileType('debug-info-json');
+      setFileContent(null);
+
+      // Add history entry when switching to viewer
+      router.push('/?view=debug', { scroll: false });
 
     } catch (error) {
       console.error('Error generating JSON:', error);
@@ -320,41 +398,58 @@ export default function Home() {
     const hasInput = inputValue.trim().length > 0;
 
     return (
-      <form 
-        className="relative"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <textarea
-          placeholder="Enter a scenario or topic to explore and debug (e.g., 'Linux Kernel - Process Switching', 'Git - Commit Workflow')"
-          className="w-full h-40 bg-gray-900 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          disabled={isLoading}
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-        />
-        <div className="absolute right-3 bottom-3">
-          <button 
-            onClick={() => {
-              if (inputValue.trim()) {
-                handleJsonGenerate(inputValue.trim());
-              }
-            }}
-            disabled={isLoading || !hasInput}
-            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200
-              ${isLoading 
-                ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
-                : hasInput
-                  ? 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-600 hover:to-indigo-600 shadow-lg'
-                  : 'bg-gray-800 text-gray-600'}`}
-            title="Start Debugging"
-          >
-            {isLoading ? (
-              <span>...</span>
-            ) : (
-              <ChevronRight size={20} />
-            )}
-          </button>
-        </div>
-      </form>
+      <div className="space-y-2">
+        <form 
+          className="relative"
+          onSubmit={(e) => e.preventDefault()}
+        >
+          <textarea
+            placeholder="Enter a scenario or topic to explore and debug (e.g., 'Linux Kernel - Process Switching', 'Git - Commit Workflow')"
+            className="w-full h-40 bg-gray-900 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            disabled={isLoading}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+          />
+          <div className="absolute right-3 bottom-3 flex items-center gap-3">
+            {/* Async Mode Toggle */}
+            <label className="inline-flex items-center cursor-pointer">
+              <span className="mr-2 text-sm text-gray-400">Async</span>
+              <div className="relative">
+                <input 
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isAsyncMode}
+                  onChange={(e) => setIsAsyncMode(e.target.checked)}
+                />
+                <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </div>
+            </label>
+
+            {/* Submit Button */}
+            <button 
+              onClick={() => {
+                if (inputValue.trim()) {
+                  isAsyncMode ? handleJsonGenerateAsync(inputValue.trim()) : handleJsonGenerate(inputValue.trim());
+                }
+              }}
+              disabled={isLoading || !hasInput}
+              className={`p-2 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-200
+                ${isLoading 
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                  : hasInput
+                    ? 'bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-600 hover:to-indigo-600 shadow-lg'
+                    : 'bg-gray-800 text-gray-600'}`}
+              title="Start Debugging"
+            >
+              {isLoading ? (
+                <span>...</span>
+              ) : (
+                <ChevronRight size={20} />
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     );
   };
 
@@ -363,13 +458,16 @@ export default function Home() {
 
     return (
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="fixed top-6 left-6">
-          <div className="flex items-center gap-2">
+        <div className="fixed top-6 left-6 flex items-center gap-6">
+          <button
+            onClick={resetState}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
             <DebugLensIcon className="w-6 h-6" />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-violet-400 text-transparent bg-clip-text">
               DebugLens
             </span>
-          </div>
+          </button>
         </div>
 
         <div className="max-w-4xl w-full space-y-8">
@@ -390,7 +488,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Enhanced Central Prompt Box */}
+          {/* Input Prompt Box */}
           <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
             {renderPromptForm()}
           </div>
@@ -483,26 +581,13 @@ export default function Home() {
   };
 
   return (
-    <AsyncDebugProvider>
+    <AsyncDebugProvider isAsyncMode={isAsyncMode}>
       <div className="h-screen flex flex-col overflow-hidden bg-gray-900">
-        {/* Show loading overlay when isLoading is true */}
         {isLoading && <DebugLoadingAnimation />}
 
         {!fileType ? renderLandingPage() : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {isFeatureEnabled('PARALLEL_LOADING') ? (
-              <GherkinJSONAsyncViewer 
-                content={debugInfoJsonParsed} 
-                onReset={resetState} 
-                onOpenAIChat={() => setIsAIChatOpen(true)} 
-              />
-            ) : (
-              <GherkinJSONViewer 
-                content={debugInfoJsonParsed} 
-                onReset={resetState} 
-                onOpenAIChat={() => setIsAIChatOpen(true)} 
-              />
-            )}
+            {renderViewer()}
           </div>
         )}
 

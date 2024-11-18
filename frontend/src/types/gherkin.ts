@@ -62,7 +62,9 @@ export interface Flow {
   prerequisites: string;
 }
 
-export interface GitFeatureContent {
+export interface FeatureContent {
+  title: string;
+  description?: string;
   scenarios: {
     name: string;
     description?: string;

@@ -3,6 +3,7 @@ import { fetchStepData } from './asyncDebugService';
 
 interface LoadingTask {
   stepId: string;
+  blockName: string;
   priority: number;
   status: 'pending' | 'loading' | 'completed' | 'failed';
   retryCount: number;
@@ -16,9 +17,10 @@ export class BackgroundLoadingService {
 
   constructor(private eventEmitter: EventEmitter) {}
 
-  async queueStepLoading(stepId: string, priority: number = 1): Promise<void> {
+  async queueStepLoading(stepId: string, blockName: string, priority: number = 1): Promise<void> {
     this.taskQueue.push({
       stepId,
+      blockName,
       priority,
       status: 'pending',
       retryCount: 0
@@ -46,7 +48,7 @@ export class BackgroundLoadingService {
         task.status = 'loading';
         
         try {
-          const data = await fetchStepData(task.stepId);
+          const data = await fetchStepData(task.blockName);
           task.status = 'completed';
           this.dispatchLoadSuccess(task.stepId, data);
         } catch (error) {

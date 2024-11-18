@@ -19,6 +19,7 @@ interface GherkinJSONViewerProps {
   };
   onReset: () => void;
   onOpenAIChat?: () => void;
+  isAsyncMode?: boolean;
 }
 
 interface CodeBlock {
@@ -191,7 +192,7 @@ interface CodeBlockInfo {
   codeBlock: CodeBlock;
 }
 
-export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset, onOpenAIChat }) => {
+export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset, onOpenAIChat, isAsyncMode }) => {
   const [selectedScenario, setSelectedScenario] = useState<string>();
   const [variables, setVariables] = useState<VariableState[]>([]);
   const [currentConcepts, setCurrentConcepts] = useState<ConceptsPanelProps['concepts'] | null>(null);
@@ -574,8 +575,13 @@ export const GherkinJSONViewer: FC<GherkinJSONViewerProps> = ({ content, onReset
         <div className="flex items-center h-12">
           {/* Brand section - match sidebar width */}
           <div className="w-64 flex items-center px-4">
-            <DebugLensIcon className="w-5 h-5" />
-            <span className="text-white font-medium ml-3">DebugLens</span>
+            <button 
+              onClick={onReset}
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
+              <DebugLensIcon className="w-5 h-5" />
+              <span className="text-white font-medium ml-3">DebugLens</span>
+            </button>
           </div>
 
           {/* Toolbar buttons - aligned with main content */}

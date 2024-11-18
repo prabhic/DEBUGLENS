@@ -54,6 +54,30 @@ const ResponseSchema = z.object({
 // In-memory session storage
 const sessions: Record<string, any> = {};
 
+async function logResponse(sessionId: string, response: any) {
+  try {
+    const logDir = path.join(process.cwd(), 'logs', 'async-debug');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const logFile = `response-${sessionId}-${timestamp}.log`;
+
+    await fs.mkdir(logDir, { recursive: true });
+    await fs.writeFile(
+      path.join(logDir, logFile),
+      JSON.stringify({
+        timestamp,
+        sessionId,
+        response,
+        metadata: {
+          nodeEnv: process.env.NODE_ENV,
+          model: process.env.CLAUDE_MODEL,
+        }
+      }, null, 2)
+    );
+  } catch (error) {
+    console.error('Failed to log response:', error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     // 1. Request Validation
@@ -239,7 +263,10 @@ Note: For async generation, provide the basic structure first with placeholder c
       }, null, 2)
     );
 
-    // 10. Return Initial Response
+    // 10. Log Response
+    await logResponse(sessionId, jsonContent);
+
+    // 11. Return Initial Response
     return NextResponse.json({
       sessionId,
       content: jsonContent.feature,

@@ -1,4 +1,4 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useMemo } from 'react';
 import { GherkinJSONViewerProps, StepData } from '@/components/CodeViewer/GherkinJSONViewer';
 import { useAsyncDebug } from '@/contexts/AsyncDebugContext';
 import { fetchStepData } from '@/services/asyncDebugService';
@@ -7,9 +7,17 @@ import { ConceptsPanel } from './ConceptsPanel';
 import { VariablesPanel } from './VariablesPanel';
 import { ResizablePanel } from '@/components/CodeViewer/ResizablePanel';
 import { DebugToolbar } from './DebugToolbar';
+import { isFeatureEnabled } from '@/config/features';
+import { BackgroundLoadingService } from '@/services/BackgroundLoadingService';
+import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
 
-export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ content, onReset, onOpenAIChat }) => {
-  const { state, dispatch, eventEmitter } = useAsyncDebug();
+export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ 
+  content, 
+  onReset, 
+  onOpenAIChat, 
+  isAsyncMode: asyncModeFromProps 
+}) => {
+  const { state, dispatch, eventEmitter, isAsyncMode } = useAsyncDebug();
   const [selectedScenario, setSelectedScenario] = React.useState<string>();
   const [rightPanelWidth, setRightPanelWidth] = React.useState<number>(300);
   const [isDebugging, setIsDebugging] = React.useState(false);
@@ -20,13 +28,18 @@ export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ content, on
   const [allCodeBlocks, setAllCodeBlocks] = React.useState<CodeBlockInfo[]>([]);
   const [variables, setVariables] = React.useState<VariableState[]>([]);
   const [currentConcepts, setCurrentConcepts] = React.useState<ConceptsPanelProps['concepts'] | null>(null);
+  const backgroundLoader = useMemo(() => new BackgroundLoadingService(eventEmitter), [eventEmitter]);
 
   useEffect(() => {
+    console.log('[AsyncViewer] Setting up event listeners');
+
     const handleStepLoadSuccess = ({ stepId, data }: { stepId: string; data: any }) => {
+      console.log('[AsyncViewer] Step load success event:', { stepId, dataKeys: Object.keys(data) });
       dispatch({ type: 'LOAD_SUCCESS', stepId, data });
     };
 
     const handleStepLoadFailure = ({ stepId, error }: { stepId: string; error: any }) => {
+      console.error('[AsyncViewer] Step load failure event:', { stepId, error });
       dispatch({ type: 'LOAD_FAILURE', stepId, error });
     };
 
@@ -34,6 +47,7 @@ export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ content, on
     eventEmitter.on('stepLoadFailure', handleStepLoadFailure);
 
     return () => {
+      console.log('[AsyncViewer] Cleaning up event listeners');
       eventEmitter.off('stepLoadSuccess', handleStepLoadSuccess);
       eventEmitter.off('stepLoadFailure', handleStepLoadFailure);
     };
@@ -42,9 +56,12 @@ export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ content, on
   // Select first scenario by default
   useEffect(() => {
     if (content.scenarios && content.scenarios.length > 0) {
+      console.log('[AsyncViewer] Setting first scenario:', { scenario: content.scenarios[0].name });
+      
       setSelectedScenario(content.scenarios[0].name);
     }
   }, [content]);
+  
 
   const getCurrentScenario = (): ScenarioData | null => {
     if (!selectedScenario) return null;
@@ -240,24 +257,134 @@ export const GherkinJSONAsyncViewer: FC<GherkinJSONViewerProps> = ({ content, on
   };
   
   useEffect(() => {
-    // Initialize parallel debug loading if enabled
-    if (isFeatureEnabled('PARALLEL_LOADING')) {
-      // Implement logic to handle session-based data fetching
+    console.log('[AsyncViewer] Starting parallel loading effect:', {
+      scenarioId: selectedScenario,
+      stateStepsCount: Object.keys(state.steps).length,
+      allCodeBlocksCount: allCodeBlocks.length,
+      isAsyncMode,
+      asyncModeFromProps,
+      isParallelLoadingEnabled: isFeatureEnabled('PARALLEL_LOADING'),
+      hasContent: !!content
+    });
+
+    if (!isFeatureEnabled('PARALLEL_LOADING')) {
+      console.log('[AsyncViewer] Parallel loading feature is disabled');
+      return;
     }
-  }, []);
+
+    // Check for either context or prop async mode
+    if (!isAsyncMode && !asyncModeFromProps) {
+      console.log('[AsyncViewer] Not in async mode', { 
+        contextAsyncMode: isAsyncMode, 
+        propsAsyncMode: asyncModeFromProps 
+      });
+      return;
+    }
+
+    if (!content) {
+      console.log('[AsyncViewer] No content available');
+      return;
+    }
+
+    const scenario = getCurrentScenario();
+    if (!scenario) {
+      console.error('[AsyncViewer] No scenario found for parallel loading');
+      return;
+    }
+
+    console.log('[AsyncViewer] Current scenario:', {
+      name: scenario.name,
+      stepsCount: scenario.steps.length,
+      currentBlocks: allCodeBlocks.length
+    });
+
+    // Initialize allCodeBlocks if not already done
+    if (allCodeBlocks.length === 0) {
+      console.log('[AsyncViewer] Initializing code blocks');
+      const blocks: CodeBlockInfo[] = [];
+      scenario.steps.forEach((step, stepIndex) => {
+        step.sections.forEach((section, sectionIndex) => {
+          section.codeBlocks.forEach((block, codeBlockIndex) => {
+            blocks.push({
+              stepIndex,
+              sectionIndex,
+              codeBlockIndex,
+              codeBlock: block
+            });
+          });
+        });
+      });
+      console.log('[AsyncViewer] Created blocks:', {
+        blockCount: blocks.length,
+        firstBlock: blocks[0]?.codeBlock.name,
+        lastBlock: blocks[blocks.length - 1]?.codeBlock.name
+      });
+      setAllCodeBlocks(blocks);
+      return; // Exit and let next effect iteration handle loading
+    }
+
+    console.log('[AsyncViewer] Starting block loading loop:', {
+      totalBlocks: allCodeBlocks.length,
+      loadedBlocks: Object.keys(state.steps).length
+    });
+
+    // Queue all blocks for loading
+    allCodeBlocks.forEach((block, index) => {
+      const stepId = `${block.stepIndex}-${block.sectionIndex}-${block.codeBlockIndex}`;
+      const priority = index === 0 ? 2 : 1;
+      
+      if (state.steps[stepId]?.status === 'loaded' || state.steps[stepId]?.status === 'loading') {
+        console.log('[AsyncViewer] Skipping already loaded/loading block:', {
+          stepId,
+          status: state.steps[stepId]?.status,
+          blockName: block.codeBlock.name
+        });
+        return;
+      }
+
+      // Dispatch START_LOADING before queueing
+      dispatch({ type: 'START_LOADING', stepId });
+
+      console.log('[AsyncViewer] Queueing block for loading:', {
+        stepId,
+        blockName: block.codeBlock.name,
+        priority,
+        blockIndex: index,
+        totalBlocks: allCodeBlocks.length
+      });
+
+      backgroundLoader.queueStepLoading(stepId, block.codeBlock.name, priority);
+    });
+  }, [selectedScenario, state.steps, dispatch, eventEmitter, isAsyncMode, asyncModeFromProps, content, allCodeBlocks, backgroundLoader]);
   
   return (
     <div className="flex flex-col h-full">
-      <DebugToolbar
-        isDebugging={isDebugging}
-        isPaused={isPaused}
-        hasBreakpoints={breakpoints.size > 0}
-        onStartDebugging={() => {/* Implement start debugging */}}
-        onStopDebugging={handleStopDebugging}
-        onContinue={handleContinue}
-        onStepOver={handleStepOver}
-        onClearBreakpoints={handleClearBreakpoints}
-      />
+      <div className="flex-none bg-gray-900 border-b border-gray-700">
+        <div className="flex items-center h-12">
+          {/* Brand section - match sidebar width */}
+          <div className="w-64 flex items-center px-4">
+            <button 
+              onClick={onReset}
+              className="flex items-center hover:opacity-80 transition-opacity"
+            >
+              <DebugLensIcon className="w-5 h-5" />
+              <span className="text-white font-medium ml-3">DebugLens</span>
+            </button>
+          </div>
+          
+          {/* Rest of the toolbar content */}
+          <DebugToolbar
+            isDebugging={isDebugging}
+            isPaused={isPaused}
+            hasBreakpoints={breakpoints.size > 0}
+            onStartDebugging={() => {/* Implement start debugging */}}
+            onStopDebugging={handleStopDebugging}
+            onContinue={handleContinue}
+            onStepOver={handleStepOver}
+            onClearBreakpoints={handleClearBreakpoints}
+          />
+        </div>
+      </div>
 
       {/* Main content area */}
       <div className="flex-1 flex min-h-0 overflow-hidden">

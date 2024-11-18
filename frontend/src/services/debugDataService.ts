@@ -1,10 +1,21 @@
-import { GitFeatureContent } from '@/types/gherkin';
+import { FeatureContent } from '@/types/gherkin';
 
-// Mock implementation - replace with actual data fetching logic
+let featureContentCache: FeatureContent | null = null;
+
+export const setFeatureContent = (content: FeatureContent) => {
+  featureContentCache = content;
+};
+
+export const getFeatureContent = async (): Promise<FeatureContent> => {
+  if (!featureContentCache) {
+    throw new Error('Feature content not initialized');
+  }
+  return featureContentCache;
+};
+
 export const fetchCodeBlockData = async (codeBlockName: string) => {
-  // Example: Fetch from database or in-memory store
-  const featureContent: GitFeatureContent = await getFeatureContent(); // Implement getFeatureContent accordingly
-
+  const featureContent = await getFeatureContent();
+  
   for (const scenario of featureContent.scenarios) {
     for (const step of scenario.steps) {
       for (const section of step.sections) {

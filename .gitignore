@@ -59,3 +59,9 @@ override.tf.json
 .terraformrc
 terraform.rc
 scratchpad/
+
+# Logs at all levels
+logs/
+**/logs/
+*.log
+**/*.log
