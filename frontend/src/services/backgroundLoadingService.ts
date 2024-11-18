@@ -1,4 +1,5 @@
-import { VariableState } from '@/types/gherkin';
+import { EventEmitter } from 'events';
+import { VariableState, FeatureContent } from '@/types/gherkin';
 import { fetchStepData } from './asyncDebugService';
 
 interface LoadingTask {
@@ -7,70 +8,100 @@ interface LoadingTask {
   priority: number;
   status: 'pending' | 'loading' | 'completed' | 'failed';
   retryCount: number;
+  featureContent: FeatureContent;
 }
 
 export class BackgroundLoadingService {
   private taskQueue: LoadingTask[] = [];
-  private activeRequests: Set<string> = new Set();
-  private readonly MAX_CONCURRENT_REQUESTS = 3;
+  private isProcessing: boolean = false;
   private readonly MAX_RETRIES = 3;
 
   constructor(private eventEmitter: EventEmitter) {}
 
-  async queueStepLoading(stepId: string, blockName: string, priority: number = 1): Promise<void> {
+  async queueStepLoading(
+    stepId: string, 
+    stepName: string, 
+    priority: number,
+    featureContent: FeatureContent
+  ): Promise<void> {
     this.taskQueue.push({
       stepId,
-      blockName,
+      blockName: stepName,
       priority,
       status: 'pending',
-      retryCount: 0
+      retryCount: 0,
+      featureContent
     });
     
-    this.processQueue();
+    console.log('[BackgroundLoadingService] Queued step:', {
+      stepId,
+      stepName,
+      priority,
+      queueLength: this.taskQueue.length,
+      isProcessing: this.isProcessing
+    });
+
+    if (!this.isProcessing) {
+      this.processQueue();
+    }
   }
 
   private async processQueue(): Promise<void> {
-    if (this.activeRequests.size >= this.MAX_CONCURRENT_REQUESTS) {
+    if (this.isProcessing || this.taskQueue.length === 0) {
       return;
     }
 
-    // Sort queue by priority
-    this.taskQueue.sort((a, b) => b.priority - a.priority);
+    this.isProcessing = true;
 
-    // Process pending tasks
-    for (const task of this.taskQueue) {
-      if (this.activeRequests.size >= this.MAX_CONCURRENT_REQUESTS) {
-        break;
-      }
+    try {
+      this.taskQueue.sort((a, b) => b.priority - a.priority);
 
-      if (task.status === 'pending') {
-        this.activeRequests.add(task.stepId);
-        task.status = 'loading';
-        
-        try {
-          const data = await fetchStepData(task.blockName);
-          task.status = 'completed';
-          this.dispatchLoadSuccess(task.stepId, data);
-        } catch (error) {
-          if (task.retryCount < this.MAX_RETRIES) {
-            task.status = 'pending';
-            task.retryCount++;
-            task.priority += 1; // Increase priority for retry
-          } else {
-            task.status = 'failed';
-            this.dispatchLoadFailure(task.stepId, error);
-          }
-        } finally {
-          this.activeRequests.delete(task.stepId);
-          this.processQueue();
+      const task = this.taskQueue[0];
+      
+      console.log('[BackgroundLoadingService] Processing task:', {
+        stepId: task.stepId,
+        blockName: task.blockName,
+        priority: task.priority,
+        retryCount: task.retryCount
+      });
+
+      task.status = 'loading';
+      
+      try {
+        const data = await fetchStepData(task.blockName, task.featureContent);
+        task.status = 'completed';
+        this.dispatchLoadSuccess(task.stepId, data);
+      } catch (error) {
+        if (task.retryCount < this.MAX_RETRIES) {
+          task.status = 'pending';
+          task.retryCount++;
+          task.priority += 1;
+          console.log('[BackgroundLoadingService] Retrying task:', {
+            stepId: task.stepId,
+            retryCount: task.retryCount
+          });
+        } else {
+          task.status = 'failed';
+          this.dispatchLoadFailure(task.stepId, error);
         }
       }
-    }
 
-    // Clean up completed/failed tasks
-    this.taskQueue = this.taskQueue.filter(
-      task => task.status !== 'completed' && task.status !== 'failed'
-    );
+      this.taskQueue = this.taskQueue.filter(
+        t => t.status !== 'completed' && t.status !== 'failed'
+      );
+
+    } finally {
+      this.isProcessing = false;
+      
+      if (this.taskQueue.length > 0) {
+        console.log('[BackgroundLoadingService] Queue status:', {
+          remainingTasks: this.taskQueue.length,
+          nextTask: this.taskQueue[0]?.blockName
+        });
+        
+        setTimeout(() => this.processQueue(), 1000);
+      }
+    }
   }
 
   private dispatchLoadSuccess(stepId: string, data: any): void {
@@ -82,4 +113,4 @@ export class BackgroundLoadingService {
   }
 }
 
-export const backgroundLoader = new BackgroundLoadingService();
+export const backgroundLoader = new BackgroundLoadingService(new EventEmitter());

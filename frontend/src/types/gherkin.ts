@@ -14,9 +14,22 @@ export interface ScenarioSection {
 }
 
 export interface FeatureContent {
-  title: string;
-  description?: string;
-  scenarios: ScenarioSection[];
+  name: string;
+  description: string;
+  source: string;
+  scenarios: Array<{
+    name: string;
+    description?: string;
+    tag?: string;
+    steps: Array<{
+      name: string;
+      entryPoint?: string;
+      sections: Array<{
+        name: string;
+        codeBlocks: CodeBlock[];
+      }>;
+    }>;
+  }>;
 }
 
 export interface FeatureResponse {
@@ -60,17 +73,6 @@ export interface Flow {
   complexity: string;
   time: string;
   prerequisites: string;
-}
-
-export interface FeatureContent {
-  title: string;
-  description?: string;
-  scenarios: {
-    name: string;
-    description?: string;
-    tag?: string;
-    steps: StepData[];
-  }[];
 }
 
 export interface StepData {

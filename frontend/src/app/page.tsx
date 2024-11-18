@@ -27,6 +27,7 @@ import {
   faCloud
 } from '@fortawesome/free-solid-svg-icons';
 import { generateGherkinFile, generateDebugInfoJson, generateDebugInfoJsonAsync } from '@/services/fileGenerationService';
+import { setFeatureContent } from '@/services/debugDataService';
 import { isFeatureEnabled } from '@/config/features';
 import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
 import { AsyncDebugProvider } from '@/contexts/AsyncDebugContext';
@@ -376,18 +377,31 @@ export default function Home() {
       console.log('[Page] Generating JSON Async:', { prompt });
 
       const response = await generateDebugInfoJsonAsync(prompt);
-      console.log('[Page] Received JSON Async response:', { response });
+      console.log('[Page] Received JSON Async response:', { 
+        sessionId: response.sessionId,
+        contentStructure: {
+          scenarios: response.content.scenarios?.length,
+          firstScenario: response.content.scenarios?.[0],
+          steps: response.content.scenarios?.[0]?.steps
+        }
+      });
+      
+      // Initialize the debug data service cache
+      if (!response.content) {
+        throw new Error('No content received from API');
+      }
+      
+      setFeatureContent(response.content);
+      console.log('[Page] Initialized feature content cache');
       
       setIsAsyncMode(true);
       setDebugInfoJsonParsed(response.content);
       setFileType('debug-info-json');
       setFileContent(null);
 
-      // Add history entry when switching to viewer
       router.push('/?view=debug', { scroll: false });
-
     } catch (error) {
-      console.error('Error generating JSON:', error);
+      console.error('[Page] Error generating JSON:', error);
       setError('Failed to generate JSON. Please try again.');
     } finally {
       setIsLoading(false);

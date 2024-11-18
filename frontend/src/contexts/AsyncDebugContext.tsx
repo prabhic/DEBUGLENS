@@ -21,7 +21,23 @@ interface DebugStepData {
 
 // why: Define the overall state structure for async debugging. usedby: asyncDebugReducer, AsyncDebugContextProps
 interface AsyncDebugState {
-  steps: Record<string, DebugStepData>; // why: Store debug steps indexed by unique IDs. usedby: AsyncDebugState
+  steps: Record<string, {
+    status: 'idle' | 'loading' | 'loaded' | 'error';
+    sections?: Array<{
+      name: string;
+      codeBlocks: Array<{
+        name: string;
+        code: string[];
+        variables: VariableState[];
+        conceptDetails: {
+          title: string;
+          points: string[];
+          focus: string;
+        };
+      }>;
+    }>;
+    error?: string;
+  }>;
 }
 
 // why: Define actions for state transitions in the reducer. usedby: asyncDebugReducer
