@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { GherkinJSONViewer } from '@/components/CodeViewer/GherkinJSONViewer';
 import { GherkinJSONAsyncViewer } from '@/components/CodeViewer/GherkinJSONAsyncViewer';
+import { GherkinJSONAsyncViewerInstant } from '@/components/CodeViewer/GherkinJSONAsyncViewerInstant';
 import { FeatureContent } from '@/types/gherkin';
 import { AIChatDialog } from '@/components/Chat/AIChatDialog';
 import { 
@@ -31,6 +32,7 @@ import { setFeatureContent } from '@/services/debugDataService';
 import { isFeatureEnabled } from '@/config/features';
 import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
 import { AsyncDebugProvider } from '@/contexts/AsyncDebugContext';
+import { InstantDebugProvider } from '@/contexts/InstantDebugContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 // Quick start options
@@ -178,6 +180,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAsyncMode, setIsAsyncMode] = useState(false);
+  const [isInstantMode, setIsInstantMode] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -297,7 +300,13 @@ export default function Home() {
 
       case 'debug-info-json':
         return debugInfoJsonParsed && (
-          isAsyncMode ? (
+          isInstantMode ? (
+            <GherkinJSONAsyncViewerInstant
+              prompt={inputValue}
+              onReset={resetState}
+              onOpenAIChat={() => setIsAIChatOpen(true)}
+            />
+          ) : isAsyncMode ? (
             <GherkinJSONAsyncViewer 
               content={debugInfoJsonParsed}
               onReset={resetState}
@@ -408,6 +417,26 @@ export default function Home() {
     }
   };
 
+  const handleInstantGenerate = async (prompt: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Set instant mode flag
+      setIsInstantMode(true);
+      setFileType('debug-info-json');
+      setInputValue(prompt);
+      
+      router.push('/?view=instant', { scroll: false });
+      
+    } catch (error) {
+      console.error('Error starting instant debug:', error);
+      setError('Failed to start instant debugging. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderPromptForm = () => {
     const hasInput = inputValue.trim().length > 0;
 
@@ -418,32 +447,61 @@ export default function Home() {
           onSubmit={(e) => e.preventDefault()}
         >
           <textarea
-            placeholder="Enter a scenario or topic to explore and debug (e.g., 'Linux Kernel - Process Switching', 'Git - Commit Workflow')"
+            placeholder="Enter a scenario or topic to explore and debug..."
             className="w-full h-40 bg-gray-900 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             disabled={isLoading}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
           />
           <div className="absolute right-3 bottom-3 flex items-center gap-3">
-            {/* Async Mode Toggle */}
-            <label className="inline-flex items-center cursor-pointer">
-              <span className="mr-2 text-sm text-gray-400">Async</span>
-              <div className="relative">
-                <input 
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={isAsyncMode}
-                  onChange={(e) => setIsAsyncMode(e.target.checked)}
-                />
-                <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-              </div>
-            </label>
+            {/* Mode Toggles */}
+            <div className="flex items-center gap-4">
+              {/* Async Mode Toggle */}
+              <label className="inline-flex items-center cursor-pointer">
+                <span className="mr-2 text-sm text-gray-400">Async</span>
+                <div className="relative">
+                  <input 
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={isAsyncMode}
+                    onChange={(e) => {
+                      setIsAsyncMode(e.target.checked);
+                      if (e.target.checked) setIsInstantMode(false);
+                    }}
+                  />
+                  <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </div>
+              </label>
+
+              {/* Instant Mode Toggle */}
+              <label className="inline-flex items-center cursor-pointer">
+                <span className="mr-2 text-sm text-gray-400">Instant</span>
+                <div className="relative">
+                  <input 
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={isInstantMode}
+                    onChange={(e) => {
+                      setIsInstantMode(e.target.checked);
+                      if (e.target.checked) setIsAsyncMode(false);
+                    }}
+                  />
+                  <div className="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-600"></div>
+                </div>
+              </label>
+            </div>
 
             {/* Submit Button */}
             <button 
               onClick={() => {
                 if (inputValue.trim()) {
-                  isAsyncMode ? handleJsonGenerateAsync(inputValue.trim()) : handleJsonGenerate(inputValue.trim());
+                  if (isInstantMode) {
+                    handleInstantGenerate(inputValue.trim());
+                  } else if (isAsyncMode) {
+                    handleJsonGenerateAsync(inputValue.trim());
+                  } else {
+                    handleJsonGenerate(inputValue.trim());
+                  }
                 }
               }}
               disabled={isLoading || !hasInput}
@@ -595,13 +653,21 @@ export default function Home() {
   };
 
   return (
-    <AsyncDebugProvider isAsyncMode={isAsyncMode}>
+    <InstantDebugProvider>
       <div className="h-screen flex flex-col overflow-hidden bg-gray-900">
         {isLoading && <DebugLoadingAnimation />}
 
         {!fileType ? renderLandingPage() : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {renderViewer()}
+            {isInstantMode ? (
+              <GherkinJSONAsyncViewerInstant
+                prompt={inputValue}
+                onReset={resetState}
+                onOpenAIChat={() => setIsAIChatOpen(true)}
+              />
+            ) : (
+              renderViewer()
+            )}
           </div>
         )}
 
@@ -611,6 +677,6 @@ export default function Home() {
           shortcutHint="Ctrl+L"
         />
       </div>
-    </AsyncDebugProvider>
+    </InstantDebugProvider>
   );  
 }

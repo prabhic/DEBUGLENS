@@ -75,67 +75,73 @@ const logger = {
   }
 };
 
-export async function POST(request: Request) {
-  try {
-    // 1. Request Validation
-    const { prompt } = await request.json();
-    if (!prompt) {
-      return createErrorResponse('Prompt is required');
-    }
-
-    // 2. Enhanced System Prompt with JSON Template
-    const systemPrompt = `Generate a detailed debug walkthrough explaining how ${prompt} is implemented internally in the source code. Focus on the actual implementation details, data structures, and algorithms used, not on how to use the feature.
-
-Your response must follow this exact JSON structure:
-
-{
-  "feature": {
-    "name": "string - Name of the feature being debugged",
-    "description": "string - Detailed description of the feature",
-    "source": "string - Source/context of the feature",
-    "categories": {
-      "category_name": {
-        "scenarios": ["array of scenario names that belong to this category"],
-        "complexity": "string - one of: Basic, Advanced, Expert"
+// Update the template to match the reference exactly
+const RESPONSE_TEMPLATE = {
+  feature: {
+    name: "",
+    description: "",
+    source: "",
+    categories: {
+      "Basics": {
+        scenarios: ["Object Storage", "Simple Commits"],
+        complexity: "Beginner"
+      },
+      "Advanced": {
+        scenarios: ["Complex Operation 1", "Complex Operation 2"],
+        complexity: "Advanced"
       }
     },
-    "flows": [
+    flows: [
       {
-        "name": "string - Name of the debug flow",
-        "complexity": "string - Complexity level",
-        "time": "string - Estimated time (e.g., '5 mins')",
-        "prerequisites": "string - Required prior knowledge"
+        name: "Basic Flow",
+        complexity: "Basic",
+        time: "5 mins",
+        prerequisites: "None"
+      },
+      {
+        name: "Advanced Flow",
+        complexity: "Advanced",
+        time: "10 mins",
+        prerequisites: "Basic Flow"
       }
     ],
-    "scenarios": [
+    scenarios: [
       {
-        "name": "string - Must match a scenario name from categories",
-        "description": "string - Detailed scenario description",
-        "tag": "string - Category tag (e.g., BasicScenario)",
-        "steps": [
+        name: "Main Scenario name",
+        description: "implementation details on scenario",
+        tag: "BasicScenario",
+        steps: [
           {
-            "name": "string - Step name",
-            "entryPoint": "string - Optional entry point description",
-            "sections": [
+            name: "Initialize Structure",
+            entryPoint: "Entry point description",
+            sections: [
               {
-                "name": "string - Section name",
-                "codeBlocks": [
+                name: "Setup Section",
+                codeBlocks: [
                   {
-                    "name": "string - Unique name for the code block",
-                    "code": ["array of code lines"],
-                    "variables": [
+                    name: "Initial Setup",
+                    code: [
+                      "// Example code structure",
+                      "const data = {",
+                      "  key: 'value'",
+                      "}"
+                    ],
+                    variables: [
                       {
-                        "name": "string - Variable name",
-                        "previous": "any - Previous value (optional)",
-                        "current": "any - Current value",
-                        "type": "string - Variable type",
-                        "important": "boolean - Whether this is a key variable"
+                        name: "data",
+                        previous: null,
+                        current: { key: 'value' },
+                        type: "object",
+                        important: true
                       }
                     ],
-                    "conceptDetails": {
-                      "title": "string - Concept title",
-                      "points": ["array of key points about the concept"],
-                      "focus": "string - Main learning focus"
+                    conceptDetails: {
+                      title: "Core Concept",
+                      points: [
+                        "Implementation detail 1",
+                        "Implementation detail 2"
+                      ],
+                      focus: "Main technical focus"
                     }
                   }
                 ]
@@ -146,49 +152,185 @@ Your response must follow this exact JSON structure:
       }
     ]
   }
-}
+};
 
-Important Requirements:
-1. Focus on ACTUAL IMPLEMENTATION CODE, not usage examples
-2. Show the real internal data structures and algorithms
-3. Track internal state changes in core data structures
-4. Explain implementation decisions and their implications
-5. Each code block should show a distinct part of the internal implementation
-6. Include important edge cases in the implementation
+// Update system prompt to remove strict step count requirement
+const getSystemPrompt = (prompt: string) => `
+Generate a detailed debug walkthrough explaining how ${prompt} is implemented internally in the source code.
 
-Example focus areas:
-- Internal data structures used
-- Memory management approaches
-- Algorithm implementation details
-- Performance optimizations
-- Edge case handling
-- Error handling mechanisms
-- State management internals
+CRITICAL: Your response must match this reference structure EXACTLY:
 
-The goal is to understand HOW the feature works internally, not how to use it.
+1. First Scenario Requirements:
+   - Must include essential implementation steps
+   - EVERY step MUST have an entryPoint that specifies:
+     * The function/method where the step begins
+     * The file or module location if relevant
+     * Example: "Entry point: parseConfig() in config_parser.go"
 
-Important Requirements:
-1. Focus on creating ONE complete, coherent debugging scenario
-2. Each code block should contain real, executable code
-3. Track meaningful variable state changes
-4. Include clear concept explanations at each step
-5. Each code block must have a unique name
-6. Ensure proper flow between steps
+2. EntryPoint Format for Each Step:
+   - Must clearly indicate where the code execution begins
+   - Should follow format: "Entry point: function() in file"
+   - Examples:
+     * "Entry point: initContainer() in container.go"
+     * "Entry point: processRequest() in handler/request.go"
+     * "Entry point: validateInput() in validator/input.go"
 
-Make the scenario detailed but focused - quality over quantity.`;
+3. First Scenario Must Cover:
+   - Essential setup/initialization
+   - Core implementation logic
+   - Important state changes
+   - Key technical concepts
 
-    // 3. Create Enhanced LLM Request
+4. Other Scenarios:
+   - Can be simpler
+   - Should cover different aspects
+   - Don't need full implementation details
+
+Here's the exact structure to follow:
+
+${JSON.stringify(RESPONSE_TEMPLATE, null, 2)}
+
+Remember:
+1. Focus on ESSENTIAL implementation steps
+2. Each code block must show actual implementation with less number of lines
+3. Track important variable states
+4. Include technical concept explanations
+5. Follow the exact structure of the reference`;
+
+// Improve JSON extraction
+const extractJsonFromResponse = (content: string): any => {
+  // Remove markdown formatting if present
+  const cleanContent = content.replace(/```json\n|\n```/g, '');
+  
+  try {
+    // Try to parse the entire content first
+    return JSON.parse(cleanContent);
+  } catch (e) {
+    console.log('Failed to parse complete content, trying to extract JSON object');
+    
+    // Try to extract just the JSON object
+    const jsonMatch = cleanContent.match(/(\{[\s\S]*\})/);
+    if (jsonMatch) {
+      try {
+        const extracted = JSON.parse(jsonMatch[1]);
+        return extracted;
+      } catch (e) {
+        console.log('Failed to parse extracted JSON:', e);
+      }
+    }
+  }
+  
+  throw new Error('No valid JSON found in response');
+};
+
+// Update validation to match reference exactly
+const validateStepStructure = (step: any): string[] => {
+  const errors: string[] = [];
+
+  // Validate step matches reference structure
+  if (!step.name) errors.push('Step missing name');
+  if (!step.entryPoint) errors.push(`Step "${step.name}" missing entryPoint`);
+  if (!step.sections || !Array.isArray(step.sections)) {
+    errors.push(`Step "${step.name}" missing sections array`);
+    return errors;
+  }
+
+  step.sections.forEach((section: any, sIndex: number) => {
+    if (!section.name) {
+      errors.push(`Section ${sIndex} in step "${step.name}" missing name`);
+    }
+    if (!section.codeBlocks || !Array.isArray(section.codeBlocks)) {
+      errors.push(`Section "${section.name}" missing codeBlocks array`);
+      return;
+    }
+
+    section.codeBlocks.forEach((block: any, bIndex: number) => {
+      // Validate code block matches reference structure exactly
+      if (!block.name) {
+        errors.push(`Code block ${bIndex} missing name`);
+      }
+      if (!block.code || !Array.isArray(block.code) || block.code.length === 0) {
+        errors.push(`Code block "${block.name}" missing or empty code array`);
+      }
+      if (!block.variables && !block.conceptDetails) {
+        errors.push(`Code block "${block.name}" missing both variables and conceptDetails`);
+      }
+      if (block.variables) {
+        block.variables.forEach((variable: any) => {
+          if (!variable.name || variable.current === undefined || !variable.type) {
+            errors.push(`Variable in "${block.name}" missing required fields`);
+          }
+        });
+      }
+      if (block.conceptDetails) {
+        const { title, points, focus } = block.conceptDetails;
+        if (!title || !points || !Array.isArray(points) || !focus) {
+          errors.push(`Concept details in "${block.name}" missing required fields`);
+        }
+      }
+    });
+  });
+
+  return errors;
+};
+
+// Update validateCompleteness to be more flexible with step count
+const validateCompleteness = (content: any): string[] => {
+  const errors: string[] = [];
+  
+  if (!content.feature.scenarios || content.feature.scenarios.length === 0) {
+    errors.push('No scenarios found');
+    return errors;
+  }
+
+  // Validate first scenario thoroughly
+  const mainScenario = content.feature.scenarios[0];
+  
+  // Check if main scenario has steps
+  if (!mainScenario.steps || mainScenario.steps.length === 0) {
+    errors.push(`Main scenario "${mainScenario.name}" must have implementation steps`);
+  }
+  
+  // Validate each step structure in main scenario
+  mainScenario.steps?.forEach((step: any, index: number) => {
+    const stepErrors = validateStepStructure(step);
+    if (stepErrors.length > 0) {
+      errors.push(`Step ${index + 1} structure errors: ${stepErrors.join(', ')}`);
+    }
+  });
+
+  // Basic validation for categories and flows
+  const categories = Object.keys(content.feature.categories || {});
+  if (categories.length === 0) {
+    errors.push('Must have at least one category');
+  }
+
+  if (!content.feature.flows || content.feature.flows.length === 0) {
+    errors.push('Must have at least one flow');
+  }
+
+  return errors;
+};
+
+export async function POST(request: Request) {
+  try {
+    const { prompt } = await request.json();
+    if (!prompt) {
+      return createErrorResponse('Prompt is required');
+    }
+
+    // Create LLM request with updated system prompt
     const llmPayload = {
       model: process.env.CLAUDE_MODEL,
-      system: systemPrompt,
+      system: getSystemPrompt(prompt),
       messages: [
-        { 
+        {
           role: 'user',
-          content: `Create a detailed debugging scenario for: ${prompt}. Include multiple steps with variable states, meaningful code blocks, and clear conceptual explanations.`
+          content: 'Generate the debug walkthrough JSON. Remember to return ONLY the JSON object, no other text.'
         }
       ],
       max_tokens: 4000,
-      temperature: 0.7 // Add some creativity while maintaining coherence
+      temperature: 0.5 // Lower temperature for more consistent formatting
     };
 
     // 4. Log Request
@@ -230,13 +372,8 @@ Make the scenario detailed but focused - quality over quantity.`;
     console.log('Content:', messageContent);
     console.log('========================\n');
 
-    // 7. Extract and Validate JSON
-    const jsonMatch = messageContent.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
-    }
-
-    const jsonContent = JSON.parse(jsonMatch[0]);
+    // Use the new extraction function
+    const jsonContent = extractJsonFromResponse(messageContent);
 
     // Add detailed logging before validation
     console.log('\n=== Pre-Validation Response Content ===');
@@ -247,47 +384,41 @@ Make the scenario detailed but focused - quality over quantity.`;
     console.log('Categories:', Object.keys(jsonContent?.feature?.categories || {}));
     console.log('=======================================\n');
 
-    // 8. Schema Validation
-    const validationResult = ResponseSchema.safeParse(jsonContent);
-    if (!validationResult.success) {
-      console.error('\n=== Validation Error Details ===');
-      console.error('Error:', validationResult.error.message);
-      console.error('Failed at:', validationResult.error.errors);
-      console.error('===============================\n');
-      throw new Error(`Invalid response structure: ${validationResult.error.message}`);
-    }
-
-    // Only validate code block name uniqueness
-    const codeBlockNames = new Set();
-    for (const scenario of jsonContent.feature.scenarios) {
-      for (const step of scenario.steps) {
-        for (const section of step.sections) {
-          for (const block of section.codeBlocks) {
-            if (codeBlockNames.has(block.name)) {
-              throw new Error(`Duplicate code block name found: ${block.name}`);
+    // Validate against template structure
+    const validateStructure = (template: any, content: any, path = ''): string[] => {
+      const errors: string[] = [];
+      
+      for (const key in template) {
+        const currentPath = path ? `${path}.${key}` : key;
+        
+        if (!(key in content)) {
+          errors.push(`Missing required property: ${currentPath}`);
+          continue;
+        }
+        
+        if (typeof template[key] === 'object' && template[key] !== null) {
+          if (Array.isArray(template[key])) {
+            if (!Array.isArray(content[key])) {
+              errors.push(`${currentPath} should be an array`);
             }
-            codeBlockNames.add(block.name);
+          } else {
+            errors.push(...validateStructure(template[key], content[key], currentPath));
           }
         }
       }
+      
+      return errors;
+    };
+
+    const structureErrors = validateStructure(RESPONSE_TEMPLATE, jsonContent);
+    if (structureErrors.length > 0) {
+      throw new Error(`Invalid response structure: ${structureErrors.join(', ')}`);
     }
 
-    // Validate proper variable state transitions
-    for (const scenario of jsonContent.feature.scenarios) {
-      for (const step of scenario.steps) {
-        for (const section of step.sections) {
-          for (const block of section.codeBlocks) {
-            if (block.variables) {
-              for (const variable of block.variables) {
-                if (variable.previous !== undefined && 
-                    variable.previous === variable.current) {
-                  console.warn(`Warning: Variable ${variable.name} shows no state change`);
-                }
-              }
-            }
-          }
-        }
-      }
+    // Add this to the POST handler before returning the response
+    const completenessErrors = validateCompleteness(jsonContent);
+    if (completenessErrors.length > 0) {
+      throw new Error(`Incomplete response: ${completenessErrors.join(', ')}`);
     }
 
     // 9. Save Response for Analysis

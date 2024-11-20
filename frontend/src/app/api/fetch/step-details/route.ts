@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     // Create system prompt with context from passed feature content
-    const systemPrompt = `You are generating detailed implementation information for the step "${stepName}" in ${featureContent.name}.
+    const systemPrompt = `You are explaining the implementation of the step "${stepName}" in ${featureContent.name}.
 
 Context:
 ${featureContent.description}
@@ -40,23 +40,22 @@ Response Format:
 {
   "sections": [
     {
-      "name": "string - Section name describing a logical part of the step",
+      "name": "string - Brief section name",
       "codeBlocks": [
         {
-          "name": "string - Unique identifier for this code block",
-          "code": ["array of code lines showing actual implementation"],
+          "name": "string - What this code demonstrates",
+          "code": ["3-5 lines of essential code showing the core concept"],
           "variables": [
             {
               "name": "string - Variable name",
               "value": "any - Current value",
-              "type": "string - Variable type",
-              "important": "boolean - Is this a key variable"
+              "type": "string - Type",
+              "purpose": "string - Brief explanation of variable's role"
             }
           ],
           "conceptDetails": {
-            "title": "string - Main concept being demonstrated",
-            "points": ["array of key points about the implementation"],
-            "focus": "string - What to focus on in this code block"
+            "title": "string - Main concept",
+            "focus": "string - Key takeaway (1-2 sentences)"
           }
         }
       ]
@@ -65,12 +64,11 @@ Response Format:
 }
 
 Requirements:
-1. Show ACTUAL implementation code, not pseudo-code
-2. Include relevant variables and their states
-3. Explain core concepts for each code block
-4. Focus on internal implementation details
-5. Use real code examples from ${featureContent.source}
-6. Include error handling and edge cases`;
+1. Show only the most essential code (3-5 lines per block)
+2. Include only key variables that are crucial for understanding
+3. Focus on one core concept per code block
+4. Use real code examples from ${featureContent.source}
+5. Keep explanations brief and focused`;
 
     // Find the specific step context
     const scenario = featureContent.scenarios.find(s => 
@@ -129,13 +127,13 @@ Include actual code, variables, and concepts that show how this step works inter
     }
 
     console.log ('[StepDetails API] LLM response:', response);
-    const responseText = await response.text();
-    console.log('[StepDetails API] LLM response text:', responseText);
+    // const responseText = await response.text();
+    // console.log('[StepDetails API] LLM response text:', responseText);
 
-    const data = JSON.parse(responseText);
+    //const data = JSON.parse(responseText);
     
     
-    // const data = await response.json();
+    const data = await response.json();
     console.log('[StepDetails API] LLM response JSON:', data);
     const messageContent = data.content?.[0]?.text || data.completion;
     
