@@ -1,5 +1,5 @@
 import React, { FC } from 'react';
-import { Play, Square, SkipForward, FastForward, XCircle } from 'lucide-react';
+import { Play, Square, ArrowRight, CornerDownRight, XCircle } from 'lucide-react';
 
 interface DebugToolbarProps {
   isDebugging: boolean;
@@ -10,6 +10,12 @@ interface DebugToolbarProps {
   onContinue: () => void;
   onStepOver: () => void;
   onClearBreakpoints: () => void;
+  tooltips?: {
+    start?: string;
+    stop?: string;
+    continue?: string;
+    stepOver?: string;
+  };
 }
 
 export const DebugToolbar: FC<DebugToolbarProps> = ({
@@ -21,6 +27,7 @@ export const DebugToolbar: FC<DebugToolbarProps> = ({
   onContinue,
   onStepOver,
   onClearBreakpoints,
+  tooltips = {}
 }) => {
   return (
     <div className="flex items-center space-x-2">
@@ -29,7 +36,7 @@ export const DebugToolbar: FC<DebugToolbarProps> = ({
           onClick={onStartDebugging}
           disabled={!hasBreakpoints}
           className="p-1.5 rounded hover:bg-gray-700 text-green-400 disabled:text-gray-600 disabled:hover:bg-transparent"
-          title="Start Debugging (F5)"
+          title={tooltips.start || "Start Debugging"}
         >
           <Play size={20} />
         </button>
@@ -38,7 +45,7 @@ export const DebugToolbar: FC<DebugToolbarProps> = ({
           <button
             onClick={onStopDebugging}
             className="p-1.5 rounded hover:bg-gray-700 text-red-400"
-            title="Stop Debugging (Shift+F5)"
+            title={tooltips.stop || "Stop Debugging"}
           >
             <Square size={20} />
           </button>
@@ -46,17 +53,17 @@ export const DebugToolbar: FC<DebugToolbarProps> = ({
             onClick={onContinue}
             disabled={!isPaused}
             className="p-1.5 rounded hover:bg-gray-700 text-blue-400 disabled:text-gray-600 disabled:hover:bg-transparent"
-            title="Continue (F8)"
+            title={tooltips.continue || "Continue"}
           >
-            <FastForward size={20} />
+            <Play size={20} />
           </button>
           <button
             onClick={onStepOver}
             disabled={!isPaused}
             className="p-1.5 rounded hover:bg-gray-700 text-blue-400 disabled:text-gray-600 disabled:hover:bg-transparent"
-            title="Step Over (F10)"
+            title={tooltips.stepOver || "Step Over"}
           >
-            <SkipForward size={20} />
+            <CornerDownRight size={20} />
           </button>
         </>
       )}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useInstantDebug } from '@/contexts/InstantDebugContext';
 import { DebugToolbar } from './DebugToolbar';
 import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
@@ -73,6 +73,76 @@ export const GherkinJSONAsyncViewerInstant: React.FC<GherkinJSONAsyncViewerInsta
     }
   };
 
+  // Add function to handle debug navigation
+  const handleStartDebugging = useCallback(() => {
+    setIsDebugging(true);
+    setIsPaused(true);
+    // Navigate to first step if available
+    if (state.stepOrder.length > 0) {
+      stepTo(state.stepOrder[0]);
+    }
+  }, [state.stepOrder, stepTo]);
+
+  const handleStopDebugging = useCallback(() => {
+    setIsDebugging(false);
+    setIsPaused(true);
+  }, []);
+
+  const handleStepOver = useCallback(() => {
+    if (!state.activeStep || !isDebugging) return;
+    
+    const currentIndex = state.stepOrder.indexOf(state.activeStep);
+    if (currentIndex < state.stepOrder.length - 1) {
+      stepTo(state.stepOrder[currentIndex + 1]);
+    }
+  }, [state.activeStep, state.stepOrder, stepTo, isDebugging]);
+
+  const handleContinue = useCallback(() => {
+    setIsPaused(false);
+    handleStepOver();
+  }, [handleStepOver]);
+
+  // Add keyboard event handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Prevent default behavior for these keys
+      if (event.key === 'F5' || event.key === 'F10') {
+        event.preventDefault();
+      }
+
+      // F5 - Start/Continue Debugging
+      if (event.key === 'F5') {
+        if (!isDebugging) {
+          handleStartDebugging();
+        } else if (isPaused) {
+          handleContinue();
+        }
+      }
+
+      // F10 - Step Over
+      if (event.key === 'F10') {
+        if (isDebugging && isPaused) {
+          handleStepOver();
+        }
+      }
+
+      // Shift + F5 - Stop Debugging
+      if (event.key === 'F5' && event.shiftKey) {
+        if (isDebugging) {
+          handleStopDebugging();
+        }
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isDebugging, isPaused, handleStartDebugging, handleContinue, handleStepOver, handleStopDebugging]);
+
   // Loading state
   if (state.metadata.completionStatus === 'initializing') {
     return (
@@ -120,15 +190,18 @@ export const GherkinJSONAsyncViewerInstant: React.FC<GherkinJSONAsyncViewerInsta
             <DebugToolbar
               isDebugging={isDebugging}
               isPaused={isPaused}
-              hasBreakpoints={true}
-              onStartDebugging={() => setIsDebugging(true)}
-              onStopDebugging={() => {
-                setIsDebugging(false);
-                setIsPaused(true);
-              }}
-              onContinue={() => setIsPaused(false)}
-              onStepOver={() => {}}
+              hasBreakpoints={state.stepOrder.length > 0}
+              onStartDebugging={handleStartDebugging}
+              onStopDebugging={handleStopDebugging}
+              onContinue={handleContinue}
+              onStepOver={handleStepOver}
               onClearBreakpoints={() => {}}
+              tooltips={{
+                start: "Start Debugging (F5)",
+                stop: "Stop Debugging (Shift+F5)",
+                continue: "Continue (F5)",
+                stepOver: "Step Over (F10)"
+              }}
             />
           </div>
         </div>
@@ -179,21 +252,38 @@ export const GherkinJSONAsyncViewerInstant: React.FC<GherkinJSONAsyncViewerInsta
                   </div>
 
                   {/* Code Block */}
-                  <div className="font-mono bg-gray-900 rounded p-3 mb-3">
-                    {step.code.initial.map((line, index) => (
-                      <div key={index} className="text-gray-300">
-                        {line}
-                      </div>
-                    ))}
+                  <div className="font-mono bg-gray-900/50 rounded-lg overflow-hidden mb-3">
+                    {/* Code Header */}
+                    <div className="bg-gray-800/50 px-3 py-1.5 border-b border-gray-700/50 flex items-center justify-between">
+                      <div className="text-xs text-gray-400">Implementation</div>
+                    </div>
+                    {/* Code Content */}
+                    <div className="overflow-x-auto">
+                      {step.code.initial.map((line, index) => (
+                        <div key={index} className="flex hover:bg-gray-800/30">
+                          {/* Line Number */}
+                          <div className="text-xs text-gray-600 select-none w-[3rem] px-3 text-right border-r border-gray-700/50 py-[3px]">
+                            {index + 1}
+                          </div>
+                          {/* Code Line */}
+                          <div className="text-gray-300 flex-1 px-4 py-[3px]">
+                            <pre className="text-xs font-mono whitespace-pre">{line}</pre>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Implementation Details */}
                   {step.concepts.detailed && (
-                    <div className="text-sm text-gray-400 space-y-2">
+                    <div className="text-sm text-gray-400 space-y-2 mt-4 bg-gray-900/30 rounded-lg p-3">
                       {step.concepts.detailed.explanation.map((point, idx) => (
-                        <div key={idx}>{point}</div>
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-blue-400">•</span>
+                          <span>{point}</span>
+                        </div>
                       ))}
-                      <div className="text-green-400 mt-2">
+                      <div className="text-green-400 mt-2 pl-4">
                         {step.concepts.detailed.impact}
                       </div>
                     </div>

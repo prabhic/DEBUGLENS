@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useMemo } from 'react';
 
 export interface InstantDebugState {
   activeStep: string | null;
@@ -71,6 +71,8 @@ const InstantDebugContext = createContext<{
   dispatch: React.Dispatch<InstantDebugAction>;
   startInstantDebug: (prompt: string) => Promise<void>;
   stepTo: (stepId: string) => Promise<void>;
+  isPaused: boolean;
+  setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
 } | undefined>(undefined);
 
 export function InstantDebugProvider({ children }: { children: React.ReactNode }) {
@@ -78,6 +80,7 @@ export function InstantDebugProvider({ children }: { children: React.ReactNode }
   const eventSourceRef = useRef<EventSource | null>(null);
   const activeRequestRef = useRef<string | null>(null);
   const isInitializedRef = useRef(false);
+  const [isPaused, setIsPaused] = React.useState(true);
 
   useEffect(() => {
     // Handle initial step loading
@@ -120,6 +123,20 @@ export function InstantDebugProvider({ children }: { children: React.ReactNode }
       stepTo(activeStepId, true); // Pass true to indicate this is an initial load
     }
   }, [state.activeStep]);
+
+  useEffect(() => {
+    // When debugging is active and not paused, automatically move to next step
+    if (state.activeStep && !isPaused) {
+      const currentIndex = state.stepOrder.indexOf(state.activeStep);
+      if (currentIndex < state.stepOrder.length - 1) {
+        const nextStepId = state.stepOrder[currentIndex + 1];
+        const timer = setTimeout(() => {
+          stepTo(nextStepId);
+        }, 1000); // 1 second delay between steps
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [state.activeStep, isPaused]);
 
   const startInstantDebug = async (prompt: string): Promise<void> => {
     if (isInitializedRef.current && activeRequestRef.current === prompt) {
@@ -314,8 +331,17 @@ export function InstantDebugProvider({ children }: { children: React.ReactNode }
     }
   };
 
+  const contextValue = useMemo(() => ({
+    state,
+    dispatch,
+    startInstantDebug,
+    stepTo,
+    isPaused,
+    setIsPaused
+  }), [state, dispatch, startInstantDebug, stepTo, isPaused]);
+
   return (
-    <InstantDebugContext.Provider value={{ state, dispatch, startInstantDebug, stepTo }}>
+    <InstantDebugContext.Provider value={contextValue}>
       {children}
     </InstantDebugContext.Provider>
   );
