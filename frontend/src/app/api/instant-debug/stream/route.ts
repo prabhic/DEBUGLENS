@@ -170,9 +170,7 @@ export async function GET(request: Request) {
                 name: step.name,
                 summary: step.summary,
                 code: [
-                  `// ${step.name}`,
-                  `// ${step.summary}`,
-                  '',
+
                   step.previewCode || '// Code preview loading...'
                 ],
                 concepts: {

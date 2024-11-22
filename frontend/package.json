@@ -13,6 +13,7 @@
     "@fortawesome/free-brands-svg-icons": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "@heroicons/react": "^2.2.0",
     "@radix-ui/react-switch": "^1.1.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.456.0",
@@ -20,6 +21,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.1",
+    "react-syntax-highlighter": "^15.6.1",
     "tailwind-merge": "^2.5.4",
     "uuid": "^11.0.3",
     "zod": "^3.23.8"

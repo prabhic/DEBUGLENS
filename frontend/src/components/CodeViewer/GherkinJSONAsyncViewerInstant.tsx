@@ -4,6 +4,7 @@ import { DebugToolbar } from './DebugToolbar';
 import { DebugLensIcon } from '@/components/Icons/DebugLensIcon';
 import type { InstantDebugState } from '@/contexts/InstantDebugContext';
 import { InstantVariablePanel } from './InstantVariablePanel';
+import { DebugStepCard } from './DebugStepCard';
 
 interface GherkinJSONAsyncViewerInstantProps {
   prompt: string;
@@ -26,7 +27,7 @@ export const GherkinJSONAsyncViewerInstant: React.FC<GherkinJSONAsyncViewerInsta
   onReset,
   onOpenAIChat
 }) => {
-  const { state, startInstantDebug, stepTo } = useInstantDebug();
+  const { state, startInstantDebug, stepTo, dispatch } = useInstantDebug();
   const [isDebugging, setIsDebugging] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   const promptRef = useRef(prompt);
@@ -143,6 +144,20 @@ export const GherkinJSONAsyncViewerInstant: React.FC<GherkinJSONAsyncViewerInsta
     };
   }, [isDebugging, isPaused, handleStartDebugging, handleContinue, handleStepOver, handleStopDebugging]);
 
+  const handleStartNewDebugSession = async () => {
+    // Reset the current debug state
+    dispatch({ type: 'RESET' });
+
+    // Start a new debug session
+    await startInstantDebug(prompt);
+  };
+
+  const handleReset = () => {
+    // Reset the debug context before navigating home
+    dispatch({ type: 'RESET', payload: {} });
+    onReset();
+  };
+
   // Loading state
   if (state.metadata.completionStatus === 'initializing') {
     return (
@@ -180,7 +195,7 @@ export const GherkinJSONAsyncViewerInstant: React.FC<GherkinJSONAsyncViewerInsta
       <div className="flex-none bg-gray-900 border-b border-gray-700">
         <div className="flex items-center h-12">
           <div className="w-64 flex items-center px-4">
-            <button onClick={onReset} className="flex items-center hover:opacity-80 transition-opacity">
+            <button onClick={handleReset} className="flex items-center hover:opacity-80 transition-opacity">
               <DebugLensIcon className="w-5 h-5" />
               <span className="text-white font-medium ml-3">DebugLens</span>
             </button>
@@ -231,64 +246,20 @@ export const GherkinJSONAsyncViewerInstant: React.FC<GherkinJSONAsyncViewerInsta
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-6">
               {orderedSteps.map(({ stepId, step }) => (
-                <div 
+                <DebugStepCard
                   key={stepId}
-                  className={`bg-gray-800 rounded-lg p-4 border-l-4 transition-colors ${
-                    state.activeStep === stepId ? 'border-blue-500' : 'border-gray-700'
-                  }`}
+                  stepId={stepId}
+                  step={{
+                    ...step,
+                    concepts: {
+                      ...step.concepts,
+                      dataStructures: step.concepts.dataStructures,
+                      algorithms: step.concepts.algorithms,
+                    }
+                  }}
+                  isActive={state.activeStep === stepId}
                   onClick={() => handleStepClick(stepId)}
-                >
-                  {/* Step Header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-medium text-blue-400">
-                      {stepId === 'overview' ? 'Implementation Overview' : step.concepts.quick}
-                    </h4>
-                    {step.status === 'generating' && (
-                      <div className="text-xs text-gray-500 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                        Analyzing...
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Code Block */}
-                  <div className="font-mono bg-gray-900/50 rounded-lg overflow-hidden mb-3">
-                    {/* Code Header */}
-                    <div className="bg-gray-800/50 px-3 py-1.5 border-b border-gray-700/50 flex items-center justify-between">
-                      <div className="text-xs text-gray-400">Implementation</div>
-                    </div>
-                    {/* Code Content */}
-                    <div className="overflow-x-auto">
-                      {step.code.initial.map((line, index) => (
-                        <div key={index} className="flex hover:bg-gray-800/30">
-                          {/* Line Number */}
-                          <div className="text-xs text-gray-600 select-none w-[3rem] px-3 text-right border-r border-gray-700/50 py-[3px]">
-                            {index + 1}
-                          </div>
-                          {/* Code Line */}
-                          <div className="text-gray-300 flex-1 px-4 py-[3px]">
-                            <pre className="text-xs font-mono whitespace-pre">{line}</pre>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Implementation Details */}
-                  {step.concepts.detailed && (
-                    <div className="text-sm text-gray-400 space-y-2 mt-4 bg-gray-900/30 rounded-lg p-3">
-                      {step.concepts.detailed.explanation.map((point, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="text-blue-400">•</span>
-                          <span>{point}</span>
-                        </div>
-                      ))}
-                      <div className="text-green-400 mt-2 pl-4">
-                        {step.concepts.detailed.impact}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                />
               ))}
 
               {state.metadata.completionStatus === 'generating' && (

@@ -6,6 +6,7 @@ export interface InstantDebugState {
   steps: Record<string, {
     status: 'generating' | 'ready' | 'error';
     order?: number;
+    name: string;
     code: {
       initial: string[];
       enhanced?: string[];
@@ -53,7 +54,8 @@ interface InstantDebugAction {
     | 'SET_ACTIVE_STEP' 
     | 'UPDATE_STATUS'
     | 'UPDATE_STEP'
-    | 'ADD_IMPLEMENTATION_STEP';
+    | 'ADD_IMPLEMENTATION_STEP'
+    | 'RESET';
   payload: any;
 }
 
@@ -432,6 +434,7 @@ function instantDebugReducer(state: InstantDebugState, action: InstantDebugActio
           [action.payload.stepId]: {
             status: 'ready',
             order: state.stepOrder.length,
+            name: action.payload.name,
             code: {
               initial: action.payload.code,
               enhanced: undefined
@@ -462,6 +465,9 @@ function instantDebugReducer(state: InstantDebugState, action: InstantDebugActio
           }
         }
       };
+      
+    case 'RESET':
+      return initialState;
       
     default:
       return state;
